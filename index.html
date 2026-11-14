@@ -531,7 +531,7 @@ async function viewCheckout(){
   const tarif = ok(await sb.from('tarif_manual').select('*').order('kota'));
   const p = S.profile || {};
   const berat = S.cart.reduce((a,b)=>a+b.berat*b.qty,0), sub = S.cart.reduce((a,b)=>a+b.harga*b.qty,0);
-  CO = { berat, sub, tarif, mode:'api', tujuan:null, svc:null, opsi:[], kurir:'jnt', gs:null, opsiJnt:[], gsReq:0 };
+  CO = { berat, sub, tarif, mode:'api', tujuan:null, svc:null, opsi:[], kurir:'jnt', gs:null, opsiJnt:[] };
   app.innerHTML = `<h1>Checkout</h1><div class="two"><div class="card">
     <h2 style="margin-top:0">Alamat pengiriman</h2>
     <div class="row"><div><label>Nama penerima</label><input id="nm" value="${esc(p.nama)}"></div><div><label>No. HP</label><input id="hp" value="${esc(p.no_hp)}"></div></div>
@@ -542,7 +542,7 @@ async function viewCheckout(){
     <label>Catatan (opsional)</label><input id="ct">
     ${gosendAktif() ? `<h2>Kurir</h2>
     <label class="svc"><input type="radio" name="kr" value="jnt" checked onchange="pilihKurir()"><div style="flex:1"><b>J&T Express</b><div class="mut">Antar kota / luar kota</div></div></label>
-    <label class="svc"><input type="radio" name="kr" value="gosend" onchange="pilihKurir()"><div style="flex:1"><b>GoSend Instant (Gojek)</b><div class="mut">Dalam kota, maks ${esc(S.settings.gosend_maks_km||'25')} km · sampai ±1–3 jam</div></div></label>
+    <label class="svc"><input type="radio" name="kr" value="gosend" onchange="pilihKurir()"><div style="flex:1"><b>GoSend Instant (Gojek)</b><div class="mut">Dalam kota, maks ${GS_TARIF.maksKm} km · sampai ±1–3 jam</div></div></label>
     <div id="gsBox" style="display:none;margin-top:8px">
       <label>Titik lokasi penerima (wajib untuk GoSend)</label>
       <button type="button" class="btn o blk" onclick="gsGps()">📍 Pakai lokasi saya sekarang (GPS)</button>
@@ -568,7 +568,6 @@ async function viewCheckout(){
       <button class="btn blk" id="buat" style="margin-top:12px" onclick="buatPesanan()">Buat Pesanan & Bayar (QRIS)</button>
       <p class="mut" id="mbInfo">Setelah pesanan dibuat, QRIS pembayaran akan muncul. Bayar sesuai total, lalu kirim bukti bayar ke WhatsApp toko.</p>
     </div></div>`;
-  let tkp; $('#kp').addEventListener('input', () => { if (CO.kurir !== 'gosend' || S.settings.gosend_mode !== 'api') return; clearTimeout(tkp); tkp = setTimeout(hitungGosend, 700); });
   // cek apakah API ongkir aktif
   const t = await cekOngkirApi();
   if (!t) { CO.mode = 'manual'; drawTujuanManual(); }
@@ -622,11 +621,14 @@ function drawSvc(){
 function hitungTotal(){ const o = CO.svc?.ongkir || 0; $('#ong').textContent = CO.svc ? rp(o) : '-'; $('#tot').textContent = rp(CO.sub + o);  if ($('#dpOn')) ubahDp(); }
 /* ---------- GOSEND (estimasi tarif per km dari titik toko) ---------- */
 const gosendAktif = () => S.settings.gosend_aktif === '1' && okKoor(parseFloat(S.settings.toko_lat), parseFloat(S.settings.toko_lng));
-const gsNum = (k, d) => { const v = Number(S.settings[k]); return isFinite(v) && v >= 0 && String(S.settings[k]||'').trim() !== '' ? v : d; };
-function tarifGosend(km){
-  const dasar = gsNum('gosend_tarif_dasar', 10000), kmD = gsNum('gosend_km_dasar', 3), perKm = gsNum('gosend_per_km', 3000);
-  return Math.ceil((dasar + Math.max(0, Math.ceil(km - kmD)) * perKm) / 500) * 500;
+// tarif berjenjang: dasar untuk km pertama, per_km sampai batas km_tier, per_km2 sesudahnya
+function hitungTarifGs(km, t){
+  const k = Math.ceil(km), tier = Math.max(t.kmD, t.tier);
+  const ekstra = Math.max(0, Math.min(k, tier) - t.kmD) * t.per1 + Math.max(0, k - tier) * t.per2;
+  return Math.ceil((t.dasar + ekstra) / 500) * 500;
 }
+const GS_TARIF = { dasar:20000, kmD:8, per1:2500, tier:20, per2:3000, maksKm:40, maksKg:20 }; // GoSend Instant (motor)
+const tarifGosend = km => hitungTarifGs(km, GS_TARIF);
 function jarakLurus(a, b, c, d){ const R = 6371, r = x => x * Math.PI / 180, dLa = r(c - a), dLo = r(d - b);
   const h = Math.sin(dLa/2)**2 + Math.cos(r(a)) * Math.cos(r(c)) * Math.sin(dLo/2)**2; return 2 * R * Math.asin(Math.sqrt(h)); }
 async function jarakJalan(la, lo){ // km via OSRM, cadangan: garis lurus × 1,3
@@ -648,28 +650,9 @@ function pilihKurir(){
 }
 async function hitungGosend(){
   CO.opsi = []; CO.gsPesan = '';
-  const maxKg = gsNum('gosend_berat_maks', 20), maxKm = gsNum('gosend_maks_km', 25);
+  const maxKg = GS_TARIF.maksKg, maxKm = GS_TARIF.maksKm;
   if (CO.berat / 1000 > maxKg) { CO.gsPesan = `Berat pesanan ${(CO.berat/1000).toLocaleString('id-ID')} kg melebihi batas GoSend (${maxKg} kg). Pilih J&T.`; drawSvc(); return; }
   if (!CO.gs) { drawSvc(); return; }
-  if (S.settings.gosend_mode === 'api' && S.settings.gosend_origin_id) {
-    const kw = $('#kp').value.trim() || CO.tujuan?.kecamatan || CO.tujuan?.label || '';
-    if (kw.length < 3) { CO.gsPesan = 'Isi kode pos penerima untuk cek tarif GoSend.'; drawSvc(); return; }
-    $('#svc').innerHTML = 'Cek tarif GoSend (RajaOngkir)…';
-    const nomor = ++CO.gsReq;
-    try {
-      const { data } = await sb.functions.invoke('ongkir-jnt', { body:{ action:'gosend', origin_id:S.settings.gosend_origin_id, dest_keyword:kw,
-        origin_pin:`${S.settings.toko_lat},${S.settings.toko_lng}`, dest_pin:`${CO.gs.la},${CO.gs.lo}`, weight:CO.berat, item_value:CO.sub } });
-      if (nomor !== CO.gsReq) return; // ada permintaan lebih baru
-      const gsList = (data?.data || []).filter(x => /gosend|gojek/i.test(x.courier||'') && Number(x.cost) > 0);
-      if (data?.ok && gsList.length) {
-        $('#gsInfo').innerHTML = `Titik: ${CO.gs.la.toFixed(5)}, ${CO.gs.lo.toFixed(5)} · tarif dari RajaOngkir`;
-        CO.opsi = gsList.map(x => ({ layanan: x.service || 'Instant', ket:'tarif GoSend (RajaOngkir)', ongkir: Number(x.cost), etd: x.etd || '' }));
-        drawSvc(); return;
-      }
-      if (data?.ok && !gsList.length) { CO.gsPesan = 'GoSend tidak tersedia untuk rute ini (di luar jangkauan / berat). Pilih J&T.'; drawSvc(); return; }
-      console.warn('API GoSend gagal, pakai estimasi:', data?.error);
-    } catch (e) { console.warn('API GoSend gagal, pakai estimasi:', e); }
-  }
   $('#svc').innerHTML = 'Menghitung jarak…';
   const j = await jarakJalan(CO.gs.la, CO.gs.lo); CO.gs.km = j.km;
   $('#gsInfo').innerHTML = `Titik: ${CO.gs.la.toFixed(5)}, ${CO.gs.lo.toFixed(5)} · Jarak dari toko <b>${j.km.toLocaleString('id-ID',{maximumFractionDigits:1})} km</b> (${j.via})`;
@@ -1443,21 +1426,8 @@ async function viewAdminPengaturan(){
     <div class="mut">ID asal: <span id="oid">${esc(s.origin_id||'-')}</span></div>
     <label>Tarif default per kg (kota lain, mode manual)</label><input name="tarif_default_per_kg" type="number" value="${esc(s.tarif_default_per_kg)}">
     <h2>Ongkir GoSend (Gojek)</h2>
-    <div class="mut">Estimasi per km dari titik koordinat toko di atas (wajib diisi). Sesuaikan tarif dengan aplikasi Gojek. Ongkir dihitung saat checkout dan bisa dikonfirmasi admin.</div>
-    <label>Sumber tarif</label><select name="gosend_mode" id="gsMode"><option value="estimasi" ${s.gosend_mode!=='api'?'selected':''}>Estimasi per km (gratis, tarif di bawah)</option><option value="api" ${s.gosend_mode==='api'?'selected':''}>API RajaOngkir / Komerce Delivery (tarif GoSend asli)</option></select>
-    <div id="gsApiBox" style="display:${s.gosend_mode==='api'?'block':'none'}">
-      <div class="mut" id="gsApiStat">Cek status API…</div>
-      <label>Kecamatan / kode pos asal toko (Delivery API)</label><input id="gsOc" placeholder="Ketik min. 3 huruf / kode pos" value="${esc(s.gosend_origin_nama||'')}"><div id="gsOsug"></div>
-      <input type="hidden" name="gosend_origin_id" value="${esc(s.gosend_origin_id||'')}"><input type="hidden" name="gosend_origin_nama" value="${esc(s.gosend_origin_nama||'')}">
-      <div class="mut">ID asal: <span id="gsOid">${esc(s.gosend_origin_id||'-')}</span> · Bila API gagal, otomatis pakai estimasi per km di bawah. Pembeli wajib isi kode pos.</div>
-    </div>
-    <div class="row"><div><label>GoSend di checkout</label><select name="gosend_aktif"><option value="0" ${s.gosend_aktif!=='1'?'selected':''}>Nonaktif</option><option value="1" ${s.gosend_aktif==='1'?'selected':''}>Aktif</option></select></div>
-      <div><label>Jangkauan maks (km)</label><input name="gosend_maks_km" type="number" min="1" step="0.5" value="${esc(s.gosend_maks_km||'25')}"></div></div>
-    <div class="row"><div><label>Tarif dasar (Rp)</label><input name="gosend_tarif_dasar" type="number" min="0" step="500" value="${esc(s.gosend_tarif_dasar||'10000')}"></div>
-      <div><label>Untuk km pertama</label><input name="gosend_km_dasar" type="number" min="0" step="0.5" value="${esc(s.gosend_km_dasar||'3')}"></div></div>
-    <div class="row"><div><label>Tarif per km berikutnya (Rp)</label><input name="gosend_per_km" type="number" min="0" step="100" value="${esc(s.gosend_per_km||'3000')}"></div>
-      <div><label>Berat maks (kg)</label><input name="gosend_berat_maks" type="number" min="1" step="1" value="${esc(s.gosend_berat_maks||'20')}"></div></div>
-    <div class="mut" id="gsContoh"></div>
+    <div class="mut">GoSend Instant: Rp20.000 untuk 8 km pertama · Rp2.500/km sampai km ke-20 · Rp3.000/km sampai 40 km · maks 20 kg. Jarak dihitung dari titik koordinat toko di atas (wajib diisi).</div>
+    <label>GoSend di checkout</label><select name="gosend_aktif"><option value="0" ${s.gosend_aktif!=='1'?'selected':''}>Nonaktif</option><option value="1" ${s.gosend_aktif==='1'?'selected':''}>Aktif</option></select>
     <h2>Tema warna</h2>
     <div class="row" style="align-items:center"><span id="temaNow" style="flex:none;width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--g1),var(--g3));box-shadow:0 0 0 1px var(--bd)"></span>
       <button type="button" class="btn o" id="temaBuka" onclick="const x=$('#temaIsi'),b=x.style.display==='none';x.style.display=b?'block':'none';this.textContent=b?'▲ Tutup pilihan warna':'🎨 Ubah warna'">🎨 Ubah warna</button></div>
@@ -1497,19 +1467,6 @@ async function viewAdminPengaturan(){
     <div class="tw"><table><tr><th>Kota</th><th>Per kg</th><th>Estimasi</th><th></th></tr>${tarif.map(t=>`<tr><td>${esc(t.kota)}</td><td>${rp(t.tarif_per_kg)}</td><td>${esc(t.etd)}</td><td><button class="btn g sm" onclick="hapus('tarif_manual',${t.id})">✕</button></td></tr>`).join('')}</table></div>
     <form id="ft" class="row" style="margin-top:10px"><input name="kota" placeholder="Kota" required><input name="tarif_per_kg" type="number" placeholder="Tarif/kg" required><input name="etd" placeholder="2-3 hari"><button class="btn" style="flex:none">+</button></form></div></div></div>`;
   pasangKoordinat(); pasangTema();
-  const gsC = () => { const v = n => Number($(`[name=${n}]`).value)||0, f = km => Math.ceil((v('gosend_tarif_dasar') + Math.max(0, Math.ceil(km - v('gosend_km_dasar'))) * v('gosend_per_km'))/500)*500;
-    $('#gsContoh').textContent = `Contoh: 2 km = ${rp(f(2))} · 5 km = ${rp(f(5))} · 10 km = ${rp(f(10))}`; };
-  ['gosend_tarif_dasar','gosend_km_dasar','gosend_per_km'].forEach(n => $(`[name=${n}]`).oninput = gsC); gsC();
-  const gsStat = async () => { if ($('#gsMode').value !== 'api') return; $('#gsApiStat').textContent = 'Cek status API…';
-    try { const { data } = await sb.functions.invoke('ongkir-jnt', { body:{ action:'dsearch', q:'' } });
-      $('#gsApiStat').innerHTML = data?.ok ? 'Status API GoSend: <b style="color:var(--ok)">AKTIF</b>' : `Status API GoSend: <b style="color:var(--warn)">belum aktif</b> (${esc(data?.error||'fungsi ongkir-jnt / API key belum siap')})`;
-    } catch(e) { $('#gsApiStat').innerHTML = `Status API GoSend: <b style="color:var(--warn)">belum aktif</b> (${esc(e.message)})`; } };
-  $('#gsMode').onchange = e => { $('#gsApiBox').style.display = e.target.value === 'api' ? 'block' : 'none'; gsStat(); }; gsStat();
-  let tgo; $('#gsOc').oninput = e => { clearTimeout(tgo); tgo = setTimeout(async () => { const q = e.target.value.trim(); if (q.length < 3) return;
-    const { data } = await sb.functions.invoke('ongkir-jnt', { body:{ action:'dsearch', q } }); const l = data?.data || [];
-    $('#gsOsug').innerHTML = l.length ? `<div class="sugg">${l.map(d=>`<div data-id="${esc(d.id)}" data-nm="${esc(d.label)}">${esc(d.label)}</div>`).join('')}</div>` : `<div class="mut">${esc(data?.error||'Tidak ditemukan')}</div>`;
-    $$('#gsOsug .sugg div').forEach(x => x.onclick = () => { $('[name=gosend_origin_id]').value = x.dataset.id; $('[name=gosend_origin_nama]').value = x.dataset.nm; $('#gsOc').value = x.dataset.nm; $('#gsOid').textContent = x.dataset.id; $('#gsOsug').innerHTML = ''; toast('Asal dipilih — klik Simpan pengaturan'); });
-  }, 400); };
   $('#fs').onsubmit = async e => { e.preventDefault(); try { const fl = $('#fl').files[0]; if (fl) $('[name=logo_url]').value = await uploadFoto(fl, 'logo'); const fbg = $('#fbg').files[0]; if (fbg) $('[name=banner_url]').value = await uploadFoto(fbg, 'iklan'); const fq = $('#fq').files[0]; if (fq) { const path = `qris/${Date.now()}.${(fq.name.split('.').pop()||'jpg').toLowerCase()}`; ok(await sb.storage.from('foto').upload(path, fq, { upsert:true, contentType: fq.type })); $('[name=qris_url]').value = sb.storage.from('foto').getPublicUrl(path).data.publicUrl; } const rows = Object.entries(Object.fromEntries(new FormData(e.target))).map(([key,value])=>({key,value}));
     ok(await sb.from('settings').upsert(rows)); await loadSettings(); toast('Pengaturan disimpan'); } catch(er){ fail(er); } };
   $('#ft').onsubmit = async e => { e.preventDefault(); try { const fd = Object.fromEntries(new FormData(e.target)); ok(await sb.from('tarif_manual').upsert({ kota:fd.kota.trim(), tarif_per_kg:+fd.tarif_per_kg, etd:fd.etd||'2-3 hari' },{onConflict:'kota'})); viewAdminPengaturan(); } catch(er){ fail(er); } };
