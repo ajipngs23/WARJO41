@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "dev.workers.ajipngs23.warjo41.twa",
+        "sha256_cert_fingerprints": ["01:DA:EA:AA:C2:2C:2F:F6:1B:5C:E0:73:32:3B:1B:61:4E:3E:AB:E4:A4:51:7C:6C:3F:19:65:8E:AC:A2:BA:AD"]
+      }
+    }]
