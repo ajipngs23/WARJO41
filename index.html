@@ -17,12 +17,12 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="demo-db.js"></script>
 <style>
-:root{color-scheme:only light;--pri:#ee4d2d;--pri-d:#d73211;--pri-l:#fff4f1;--bg:#f5f5f5;--card:#fff;--tx:#222;--mut:#757575;--bd:#e8e8e8;--ok:#26aa99;--warn:#f69113;--err:#e02c2c;--r:4px}
+:root{color-scheme:only light;--pri:#ee4d2d;--pri-d:#d73211;--pri-l:#fff4f1;--g1:#ee4d2d;--g2:#ff7337;--g3:#ffb03b;--g1rgb:238,77,45;--g2rgb:255,115,55;--gd:#c2441f;--gdeg:120deg;--bg:#f5f5f5;--card:#fff;--tx:#222;--mut:#757575;--bd:#e8e8e8;--ok:#26aa99;--warn:#f69113;--err:#e02c2c;--r:4px}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--tx);font-size:14px}
 a{color:var(--pri);text-decoration:none}
 /* ---- header oranye ala marketplace ---- */
-header{position:sticky;top:0;z-index:20;background:linear-gradient(-180deg,#f53d2d,#f63);box-shadow:0 1px 4px #0002}
+header{position:sticky;top:0;z-index:20;background:linear-gradient(-180deg,var(--g1),var(--g2));box-shadow:0 1px 4px #0002}
 .bar{max-width:1200px;margin:auto;display:flex;align-items:center;gap:14px;padding:10px 16px}
 .logo{font-weight:800;font-size:20px;color:#fff;white-space:nowrap;letter-spacing:.3px}
 .srch{flex:1;display:flex;background:#fff;border-radius:3px;padding:3px;min-width:0}
@@ -61,7 +61,7 @@ h1{font-size:19px;margin:4px 0 12px}h2{font-size:16px;margin:16px 0 8px}
 .unit b{font-size:13px}.unit span{color:var(--pri);font-weight:600}.unit small{font-size:11px;color:var(--mut)}.unit.on{border-color:var(--pri);background:var(--pri-l);box-shadow:inset 0 0 0 1px var(--pri)}.unit:disabled{opacity:.4;cursor:not-allowed}
 .sat{font-size:10.5px;background:var(--pri-l);color:var(--pri);border:1px solid var(--pri);border-radius:2px;padding:0 4px;font-weight:600;vertical-align:middle}
 .prod .meta{display:flex;justify-content:space-between;font-size:11px;color:var(--mut);margin-top:auto}
-.banner{border-radius:var(--r);background:linear-gradient(120deg,#ee4d2d 0%,#ff7337 55%,#ffb03b 100%);color:#fff;padding:20px 22px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:10px;overflow:hidden}
+.banner{border-radius:var(--r);background:linear-gradient(var(--gdeg),var(--g1) 0%,var(--g2) 55%,var(--g3) 100%);color:#fff;padding:20px 22px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:10px;overflow:hidden}
 .banner b{font-size:21px;display:block}.banner span{opacity:.95;font-size:13px}
 .banner .pt{background:#fff;color:var(--pri);border-radius:6px;padding:8px 12px;text-align:center;font-weight:700;white-space:nowrap}
 .banner .pt small{display:block;font-weight:400;color:var(--mut);font-size:11px}
@@ -71,7 +71,7 @@ h1{font-size:19px;margin:4px 0 12px}h2{font-size:16px;margin:16px 0 8px}
 .banner .tx .nm1{display:block;font:700 13px/1.15 PoppinsB,system-ui,sans-serif;letter-spacing:2px;opacity:.95;text-shadow:0 1px 2px #0005}
 .banner .tx .nm2{display:block;font:700 40px/1 PoppinsB,system-ui,sans-serif;letter-spacing:1px;text-shadow:0 2px 4px #0006;margin:2px 0 4px;overflow-wrap:anywhere}
 .banner .dm{display:flex;flex-direction:column;align-items:center;gap:3px;flex:none;padding:10px 14px 8px;border-radius:14px;
-  background:linear-gradient(145deg,#ffffff4d 0%,#ee4d2d59 45%,#c2441f73 100%);-webkit-backdrop-filter:blur(10px) saturate(140%);backdrop-filter:blur(10px) saturate(140%);
+  background:linear-gradient(145deg,#ffffff4d 0%,rgba(var(--g1rgb),.35) 45%,color-mix(in srgb,var(--gd) 45%,transparent) 100%);-webkit-backdrop-filter:blur(10px) saturate(140%);backdrop-filter:blur(10px) saturate(140%);
   border:1px solid #ffffff8c;box-shadow:inset 0 1px 0 #ffffffb3,inset 0 -1px 0 #ffffff26,0 6px 18px #0000004d,0 2px 4px #00000033;transition:transform .15s,box-shadow .15s}
 .banner .dm img{height:58px;display:block;filter:drop-shadow(0 1px 2px #0006)}
 .banner .dm small{color:#fff;font-size:11px;font-weight:700;text-shadow:0 1px 2px #0007}
@@ -81,7 +81,7 @@ h1{font-size:19px;margin:4px 0 12px}h2{font-size:16px;margin:16px 0 8px}
 @keyframes dmApung{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 @keyframes dmKilap{0%,60%{left:-60%}100%{left:130%}}
 @media (prefers-reduced-motion:reduce){.banner .dm,.banner .dm::after{animation:none}}
-.banner.bg{background:linear-gradient(90deg,#ee4d2d 0%,#ee4d2df2 28%,#ff7337b8 52%,#ff733700 78%),var(--bimg) right 12% center/cover no-repeat;min-height:150px;padding:20px 24px}
+.banner.bg{background:linear-gradient(90deg,var(--g1) 0%,rgba(var(--g1rgb),.95) 28%,rgba(var(--g2rgb),.72) 52%,rgba(var(--g2rgb),0) 78%),var(--bimg) right 12% center/cover no-repeat;min-height:150px;padding:20px 24px}
 .banner.bg b{font-size:24px;text-shadow:0 1px 3px #0005}.banner.bg span{text-shadow:0 1px 2px #0004;display:block;max-width:420px}
 .cats{display:flex;gap:8px;overflow-x:auto;padding:12px;background:#fff;border-radius:var(--r);margin-bottom:10px;scrollbar-width:none}
 .cats::-webkit-scrollbar{display:none}
@@ -110,7 +110,9 @@ th{background:#fafafa;font-size:12.5px;color:var(--mut);font-weight:500}
 .stats{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:14px}
 .stat{background:#fff;border-radius:var(--r);padding:14px;color:var(--tx);box-shadow:0 1px 2px #0000000d}
 .stat b{display:block;font-size:22px;margin-top:4px}
-.poinbox{background:linear-gradient(120deg,#ee4d2d,#ff7337 60%,#ffb03b);color:#fff;border-radius:8px;padding:20px;margin-bottom:14px}
+.tema-sw{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}.tema-sw button{width:44px;height:44px;border-radius:10px;border:2px solid #fff;box-shadow:0 0 0 1px var(--bd);cursor:pointer}.tema-sw button.on{box-shadow:0 0 0 2px var(--tx)}
+.tema-prev{border-radius:8px;overflow:hidden;border:1px solid var(--bd);margin-top:8px}.tema-prev .h{padding:10px 12px;color:#fff;font-weight:700}.tema-prev .b{padding:14px 12px;color:#fff;font-weight:700}.tema-prev .f{padding:10px 12px;background:#fff;display:flex;gap:8px;align-items:center}
+.poinbox{background:linear-gradient(var(--gdeg),var(--g1),var(--g2) 60%,var(--g3));color:#fff;border-radius:8px;padding:20px;margin-bottom:14px}
 .poinbox b{font-size:34px;display:block}
 .auth{max-width:420px;margin:24px auto}
 .qty{display:flex;align-items:center;gap:0;border:1px solid #ddd;border-radius:2px;width:max-content}
@@ -173,7 +175,7 @@ footer{text-align:center;color:var(--mut);font-size:12px;padding:24px 10px 40px}
   .banner .lg{width:70px;height:70px}
   .banner .tx .nm1{font-size:10.5px;letter-spacing:1.5px}.banner .tx .nm2{font-size:30px}
   .banner .dm{padding:7px 9px 6px;border-radius:11px}.banner .dm img{height:36px}.banner .dm small{font-size:9px}
-  .banner.bg{min-height:130px;padding:14px 16px;background:linear-gradient(90deg,#ee4d2df5 0%,#ee4d2de6 45%,#ff733780 75%,#ff733726 100%),var(--bimg) right 30% center/cover no-repeat}.banner.bg b{font-size:16px}.banner.bg span{font-size:12px;max-width:none}.banner.bg .pt{padding:6px 9px;font-size:13px}
+  .banner.bg{min-height:130px;padding:14px 16px;background:linear-gradient(90deg,rgba(var(--g1rgb),.96) 0%,rgba(var(--g1rgb),.9) 45%,rgba(var(--g2rgb),.5) 75%,rgba(var(--g2rgb),.15) 100%),var(--bimg) right 30% center/cover no-repeat}.banner.bg b{font-size:16px}.banner.bg span{font-size:12px;max-width:none}.banner.bg .pt{padding:6px 9px;font-size:13px}
   .two{grid-template-columns:1fr}
   .grid{grid-template-columns:repeat(2,1fr);gap:6px}
   main{padding:8px 8px 76px}
@@ -212,6 +214,7 @@ const ERR_LINK = (location.hash.match(/error_description=([^&]+)/) || [])[1];
 const sb = (DEMO_MODE && window.DemoDB) ? DemoDB.createClient() : supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth:{ flowType:'implicit', detectSessionInUrl:true } });
 const S = { session:null, profile:null, settings:{}, cart: JSON.parse(localStorage.getItem('cart')||'[]'), rt:null };
 const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
 const app = $('#app');
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const rp = n => 'Rp' + Number(n||0).toLocaleString('id-ID');
@@ -233,7 +236,32 @@ async function loadSettings(){
   S.settings = Object.fromEntries(d.map(x=>[x.key,x.value]));
   $('#logo').textContent = S.settings.nama_toko || 'Toko';
   document.title = S.settings.nama_toko || 'Toko';
+  applyTheme(S.settings);
+  try { localStorage.setItem('tema', JSON.stringify({w:S.settings.tema_warna,w2:S.settings.tema_warna2,g:S.settings.tema_gradasi,a:S.settings.tema_arah})); } catch {}
 }
+/* ================= TEMA WARNA ================= */
+const TEMA = [
+  ['Oranye','#ee4d2d','#ffb03b'],['Merah','#c62828','#ff6f61'],['Pink','#d81b60','#ff8fb1'],['Ungu','#6a1b9a','#c77dff'],
+  ['Biru','#1565c0','#4fc3f7'],['Navy Emas','#0d2b5c','#c9a227'],['Tosca','#00897b','#4dd0e1'],['Hijau','#2e7d32','#9ccc65'],
+  ['Coklat','#6d4c41','#d4a24c'],['Hitam','#212121','#757575'],['Sunset','#ff512f','#dd2476'],['Laut','#0052d4','#65c7f7']
+];
+const hexOk = h => /^#[0-9a-f]{6}$/i.test(String(h||''));
+const hexRgb = h => [1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+const rgbHex = a => '#'+a.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');
+const campur = (a,b,t) => { const x=hexRgb(a), y=hexRgb(b); return rgbHex(x.map((v,i)=>v+(y[i]-v)*t)); };
+function applyTheme(t){
+  const w = hexOk(t.tema_warna) ? t.tema_warna : '#ee4d2d';
+  const gr = t.tema_gradasi !== '0';
+  const w2 = gr ? (hexOk(t.tema_warna2) ? t.tema_warna2 : (hexOk(t.tema_warna) ? campur(w,'#ffffff',.35) : '#ffb03b')) : w;
+  const mid = campur(w,w2,.5), r = document.documentElement.style;
+  r.setProperty('--pri', w); r.setProperty('--pri-d', campur(w,'#000000',.15)); r.setProperty('--pri-l', campur(w,'#ffffff',.93));
+  r.setProperty('--g1', w); r.setProperty('--g2', mid); r.setProperty('--g3', w2); r.setProperty('--gd', campur(w,'#000000',.2));
+  r.setProperty('--g1rgb', hexRgb(w).join(',')); r.setProperty('--g2rgb', hexRgb(mid).join(','));
+  r.setProperty('--gdeg', (/^\d{1,3}$/.test(t.tema_arah||'') ? t.tema_arah : '120') + 'deg');
+  const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = w;
+}
+addEventListener('hashchange', () => { if (S.settings) applyTheme(S.settings); }); // batalkan pratinjau tema yang belum disimpan
+try { const c = JSON.parse(localStorage.getItem('tema')||'null'); if (c) applyTheme({tema_warna:c.w,tema_warna2:c.w2,tema_gradasi:c.g,tema_arah:c.a}); } catch {}
 async function loadProfile(){
   S.profile = null;
   if (!S.session) return;
@@ -1287,6 +1315,17 @@ function ambilGps(){
 }
 
 /* ================= ADMIN: PENGATURAN + TARIF MANUAL ================= */
+function pasangTema(){
+  const prev = () => { const t = { tema_warna:$('#tw1').value, tema_warna2:$('#tw2').value, tema_gradasi:$('#tgr').value, tema_arah:$('#tar').value };
+    applyTheme(t); const g = `linear-gradient(var(--gdeg),var(--g1),var(--g2) 55%,var(--g3))`;
+    $('#tprev .h').style.background = 'linear-gradient(-180deg,var(--g1),var(--g2))'; $('#tprev .b').style.background = g;
+    $('#tar').disabled = $('#tw2').disabled = t.tema_gradasi === '0';
+    $$('#tsw button').forEach(b => b.classList.toggle('on', b.dataset.a === t.tema_warna && b.dataset.b === t.tema_warna2)); };
+  $$('#tsw button').forEach(b => b.onclick = () => { $('#tw1').value = b.dataset.a; $('#tw2').value = b.dataset.b; $('#tgr').value = '1'; prev(); });
+  ['#tw1','#tw2','#tgr','#tar'].forEach(id => { $(id).oninput = prev; $(id).onchange = prev; });
+  $('#treset').onclick = () => { $('#tw1').value = '#ee4d2d'; $('#tw2').value = '#ffb03b'; $('#tgr').value = '1'; $('#tar').value = '120'; prev(); };
+  prev();
+}
 async function viewAdminPengaturan(){
   await loadSettings();
   const tarif = ok(await sb.from('tarif_manual').select('*').order('kota'));
@@ -1311,6 +1350,15 @@ async function viewAdminPengaturan(){
     <input type="hidden" name="origin_id" value="${esc(s.origin_id)}"><input type="hidden" name="origin_nama" value="${esc(s.origin_nama)}">
     <div class="mut">ID asal: <span id="oid">${esc(s.origin_id||'-')}</span></div>
     <label>Tarif default per kg (kota lain, mode manual)</label><input name="tarif_default_per_kg" type="number" value="${esc(s.tarif_default_per_kg)}">
+    <h2>Tema warna</h2>
+    <div class="mut">Pilih tema siap pakai atau atur warna sendiri. Berlaku untuk header, banner, tombol & kartu poin.</div>
+    <div class="tema-sw" id="tsw">${TEMA.map(([n,a,b])=>`<button type="button" title="${n}" data-a="${a}" data-b="${b}" style="background:linear-gradient(135deg,${a},${b})"></button>`).join('')}</div>
+    <div class="row"><div><label>Warna utama</label><input type="color" name="tema_warna" id="tw1" value="${hexOk(s.tema_warna)?s.tema_warna:'#ee4d2d'}" style="height:42px;padding:2px"></div>
+      <div><label>Warna gradasi (akhir)</label><input type="color" name="tema_warna2" id="tw2" value="${hexOk(s.tema_warna2)?s.tema_warna2:'#ffb03b'}" style="height:42px;padding:2px"></div></div>
+    <div class="row"><div><label>Gradasi</label><select name="tema_gradasi" id="tgr"><option value="1" ${s.tema_gradasi!=='0'?'selected':''}>Pakai gradasi</option><option value="0" ${s.tema_gradasi==='0'?'selected':''}>Warna polos (tanpa gradasi)</option></select></div>
+      <div><label>Arah gradasi</label><select name="tema_arah" id="tar">${[['90','Kiri → kanan'],['120','Diagonal ↘'],['180','Atas → bawah'],['45','Diagonal ↗'],['135','Diagonal lembut']].map(([v,l])=>`<option value="${v}" ${(s.tema_arah||'120')===v?'selected':''}>${l}</option>`).join('')}</select></div></div>
+    <div class="tema-prev" id="tprev"><div class="h">${esc(s.nama_toko||'Toko')}</div><div class="b">Contoh banner · poin member</div><div class="f"><span class="btn sm">Tombol</span><span class="btn o sm">Tombol 2</span><b style="color:var(--pri)">Rp25.000</b></div></div>
+    <div class="row" style="margin-top:6px"><button type="button" class="btn g" id="treset">↺ Kembali ke oranye bawaan</button></div>
     <h2>Logo toko (banner beranda)</h2>
     <img src="${esc(s.logo_url||'logo.jpg')}" style="width:96px;height:96px;object-fit:cover;border-radius:12px;border:1px solid var(--bd)">
     <label>Ganti logo (opsional, gambar kotak)</label><input type="file" id="fl" accept="image/*">
@@ -1334,7 +1382,7 @@ async function viewAdminPengaturan(){
     <div class="card" style="align-self:start"><h2 style="margin-top:0">Tarif manual J&T per kota</h2><p class="mut">Dipakai bila API ongkir belum aktif. Berat dibulatkan aturan J&T (toleransi 0,3 kg).</p>
     <div class="tw"><table><tr><th>Kota</th><th>Per kg</th><th>Estimasi</th><th></th></tr>${tarif.map(t=>`<tr><td>${esc(t.kota)}</td><td>${rp(t.tarif_per_kg)}</td><td>${esc(t.etd)}</td><td><button class="btn g sm" onclick="hapus('tarif_manual',${t.id})">✕</button></td></tr>`).join('')}</table></div>
     <form id="ft" class="row" style="margin-top:10px"><input name="kota" placeholder="Kota" required><input name="tarif_per_kg" type="number" placeholder="Tarif/kg" required><input name="etd" placeholder="2-3 hari"><button class="btn" style="flex:none">+</button></form></div></div>`;
-  pasangKoordinat();
+  pasangKoordinat(); pasangTema();
   $('#fs').onsubmit = async e => { e.preventDefault(); try { const fl = $('#fl').files[0]; if (fl) $('[name=logo_url]').value = await uploadFoto(fl, 'logo'); const fbg = $('#fbg').files[0]; if (fbg) $('[name=banner_url]').value = await uploadFoto(fbg, 'iklan'); const fq = $('#fq').files[0]; if (fq) { const path = `qris/${Date.now()}.${(fq.name.split('.').pop()||'jpg').toLowerCase()}`; ok(await sb.storage.from('foto').upload(path, fq, { upsert:true, contentType: fq.type })); $('[name=qris_url]').value = sb.storage.from('foto').getPublicUrl(path).data.publicUrl; } const rows = Object.entries(Object.fromEntries(new FormData(e.target))).map(([key,value])=>({key,value}));
     ok(await sb.from('settings').upsert(rows)); await loadSettings(); toast('Pengaturan disimpan'); } catch(er){ fail(er); } };
   $('#ft').onsubmit = async e => { e.preventDefault(); try { const fd = Object.fromEntries(new FormData(e.target)); ok(await sb.from('tarif_manual').upsert({ kota:fd.kota.trim(), tarif_per_kg:+fd.tarif_per_kg, etd:fd.etd||'2-3 hari' },{onConflict:'kota'})); viewAdminPengaturan(); } catch(er){ fail(er); } };

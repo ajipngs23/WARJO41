@@ -1,7 +1,7 @@
 /* Service worker WARJO41 — Develop Program By (Fuad&Norman)
    Halaman: network-first (selalu versi terbaru, cadangan cache saat offline).
    Aset statis lokal: stale-while-revalidate. Data Supabase/API: tidak di-cache. */
-const CACHE = 'warjo41-v1';
+const CACHE = 'warjo41-v2';
 const SHELL = ['/', '/index.html', '/demo-db.js', '/manifest.json', '/logo.jpg', '/banner-bg.jpg', '/fonts/poppins-bold.woff', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', e => {
