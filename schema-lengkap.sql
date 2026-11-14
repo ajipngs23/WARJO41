@@ -262,10 +262,11 @@ begin
   v_ongkir := coalesce((p_kirim->>'ongkir')::int, 0);
   v_total := v_sub + v_ongkir;
   v_kode := 'ORD' || to_char(now() at time zone 'Asia/Jakarta','YYMMDD') || lpad((nextval('public.order_kode_seq') % 100000)::text,5,'0');
-  insert into public.orders(kode, member_id, items, subtotal, berat_gram, layanan, ongkir, etd, total,
+  insert into public.orders(kode, member_id, items, subtotal, berat_gram, kurir, layanan, ongkir, etd, total,
     penerima_nama, penerima_hp, penerima_alamat, penerima_kota, penerima_kecamatan, penerima_kodepos, tujuan_id, catatan,
     metode_bayar, dp_persen, dp_nominal)
   values (v_kode, auth.uid(), v_items, v_sub, v_berat,
+    case when p_kirim->>'kurir' = 'GoSend' then 'GoSend' else 'J&T' end,
     coalesce(p_kirim->>'layanan','EZ'), v_ongkir, coalesce(p_kirim->>'etd',''), v_total,
     p_kirim->>'nama', p_kirim->>'hp', p_kirim->>'alamat', coalesce(p_kirim->>'kota',''),
     coalesce(p_kirim->>'kecamatan',''), coalesce(p_kirim->>'kodepos',''),
