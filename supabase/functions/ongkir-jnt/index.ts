@@ -11,8 +11,10 @@ const cors = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
-const json = (b: unknown, s = 200) =>
-  new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
+const json = (b: any, s = 200) => {
+  console.log(JSON.stringify({ ok: b?.ok, error: b?.error ?? null, n: Array.isArray(b?.data) ? b.data.length : undefined })); // log status (tanpa key)
+  return new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -21,6 +23,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
+    console.log("action", body?.action, "dkey", !!dkey, "key", !!key);
 
     // ===== GoSend via Komerce Delivery API =====
     if (body.action === "dsearch" || body.action === "gosend") {
