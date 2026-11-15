@@ -491,7 +491,7 @@ function viewDaftar(){
   app.innerHTML = `<div class="auth card"><h1>Daftar Member</h1>
     <p class="mut">Kumpulkan poin & tukarkan dengan hadiah menarik.</p>
     <form id="f"><label>Nama lengkap</label><input name="nama" required>
-    <label>No. HP / WhatsApp</label><input name="no_hp" required inputmode="tel" placeholder="08xxxxxxxxxx">
+    <label>No. HP / WhatsApp</label><input name="no_hp" required inputmode="numeric" pattern="0[0-9]{8,14}" maxlength="15" title="Hanya angka, diawali 0, 9–15 digit (mis. 081234567890)" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/^62/,'0')" placeholder="08xxxxxxxxxx">
     <label>Email</label><input name="email" type="email" required>
     <label>Password (min. 6 karakter)</label><input name="password" type="password" minlength="6" required>
     <button class="btn blk" style="margin-top:14px">Daftar</button></form>
@@ -544,7 +544,7 @@ async function viewCheckout(){
   CO = { berat, sub, tarif, mode:'api', tujuan:null, svc:null, opsi:[], kurir:'jnt', gs:null, opsiJnt:[] };
   app.innerHTML = `<h1>Checkout</h1><div class="two"><div class="card">
     <h2 style="margin-top:0">Alamat pengiriman</h2>
-    <div class="row"><div><label>Nama penerima</label><input id="nm" value="${esc(p.nama)}"></div><div><label>No. HP</label><input id="hp" value="${esc(p.no_hp)}"></div></div>
+    <div class="row"><div><label>Nama penerima</label><input id="nm" value="${esc(p.nama)}"></div><div><label>No. HP</label><input id="hp" value="${esc(p.no_hp)}" inputmode="numeric" pattern="0[0-9]{8,14}" maxlength="15" title="Hanya angka, diawali 0, 9–15 digit (mis. 081234567890)" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/^62/,'0')" placeholder="08xxxxxxxxxx"></div></div>
     <label>Alamat lengkap (jalan, no rumah, RT/RW, kelurahan)</label><textarea id="al" rows="2">${esc(p.alamat)}</textarea>
     <label>Kota / kecamatan tujuan</label>
     <div id="tujuanBox"><input id="cari" placeholder="Ketik min. 3 huruf, mis. Wonokromo" value="${esc(p.kecamatan||p.kota)}"><div id="sugg"></div></div>
@@ -712,6 +712,7 @@ document.addEventListener('input', e => { if (e.target.id !== 'gsLink') return;
 async function buatPesanan(){
   const nama = $('#nm').value.trim(), hp = $('#hp').value.trim(), alamat = $('#al').value.trim();
   if (!nama || !hp || !alamat) return toast('Lengkapi nama, HP, dan alamat', true);
+  if (!/^0[0-9]{8,14}$/.test(hp)) { $('#hp').focus(); return toast('No. HP hanya angka, diawali 0 (mis. 081234567890)', true); }
   const gs = CO.kurir === 'gosend';
   if (!gs && CO.mode === 'manual' && $('#kotaM')?.value === 'lain') CO.tujuan.kota = $('#kotaLain').value.trim();
   if (!gs && (!CO.tujuan || !CO.tujuan.kota && !CO.tujuan.label)) return toast('Pilih kota tujuan', true);
@@ -913,7 +914,7 @@ function viewProfil(){
   const p = S.profile || {};
   app.innerHTML = `<div class="auth card" style="max-width:520px"><h1>Profil</h1><p class="mut">${esc(S.session.user.email)}</p>
     <form id="f"><label>Nama</label><input name="nama" value="${esc(p.nama)}" required>
-    <label>No. HP / WhatsApp</label><input name="no_hp" value="${esc(p.no_hp)}">
+    <label>No. HP / WhatsApp</label><input name="no_hp" value="${esc(p.no_hp)}" required inputmode="numeric" pattern="0[0-9]{8,14}" maxlength="15" title="Hanya angka, diawali 0, 9–15 digit (mis. 081234567890)" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/^62/,'0')" placeholder="08xxxxxxxxxx">
     ${S.balikCheckout && !String(p.alamat||'').trim() ? '<div class="card" style="box-shadow:none;border:1px solid var(--pri);background:var(--pri-l);padding:10px;margin:6px 0">📍 Isi alamat pengiriman Anda untuk melanjutkan pesanan.</div>' : ''}
     <label>Alamat</label><textarea name="alamat" rows="2" placeholder="Nama jalan, nomor rumah, RT/RW, kelurahan">${esc(p.alamat)}</textarea>
     <div class="row"><div><label>Kecamatan</label><input name="kecamatan" value="${esc(p.kecamatan)}"></div><div><label>Kota</label><input name="kota" value="${esc(p.kota)}"></div></div>
