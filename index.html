@@ -538,7 +538,9 @@ async function viewCheckout(){
     <label>Alamat lengkap (jalan, no rumah, RT/RW, kelurahan)</label><textarea id="al" rows="2">${esc(p.alamat)}</textarea>
     <label>Kota / kecamatan tujuan</label>
     <div id="tujuanBox"><input id="cari" placeholder="Ketik min. 3 huruf, mis. Wonokromo" value="${esc(p.kecamatan||p.kota)}"><div id="sugg"></div></div>
-    <div class="row"><div><label>Kode pos</label><input id="kp" value="${esc(p.kodepos)}"></div></div>
+    <div class="row"><div><label>Kode pos</label><input id="kp" value="${esc(p.kodepos)}" inputmode="numeric"></div></div>
+    <div class="mut">Tidak tahu kode pos? <a href="javascript:void 0" onclick="this.parentNode.nextElementSibling.style.display='block';this.parentNode.style.display='none';$('#kpCari').focus()">Cari dari nama kelurahan / kecamatan</a></div>
+    <div style="display:none"><input id="kpCari" placeholder="mis. Kalirungkut atau Rungkut" autocomplete="off"><div id="kpSug"></div></div>
     <label>Catatan (opsional)</label><input id="ct">
     ${gosendAktif() ? `<h2>Kurir</h2>
     <label class="svc"><input type="radio" name="kr" value="jnt" checked onchange="pilihKurir()"><div style="flex:1"><b>J&T Express</b><div class="mut">Antar kota / luar kota</div></div></label>
@@ -569,6 +571,7 @@ async function viewCheckout(){
       <p class="mut" id="mbInfo">Setelah pesanan dibuat, QRIS pembayaran akan muncul. Bayar sesuai total, lalu kirim bukti bayar ke WhatsApp toko.</p>
     </div></div>`;
   pilihMetode(); // teks tombol sesuai metode bayar yang aktif
+  pasangCariWilayah($('#kpCari'), $('#kpSug'), w => { $('#kp').value = w.kodepos; });
   // cek apakah API ongkir aktif
   const t = await cekOngkirApi();
   if (!t) { CO.mode = 'manual'; drawTujuanManual(); }
@@ -877,6 +880,25 @@ async function tukar(id, nama, poin){
 }
 
 /* ================= MEMBER: PROFIL ================= */
+/* ---------- cari wilayah → isi kecamatan, kota & kode pos otomatis (RajaOngkir) ---------- */
+const judulKata = t => String(t||'').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+function pasangCariWilayah(inp, box, pilih){
+  let tm, list = [];
+  inp.oninput = () => { clearTimeout(tm); const q = inp.value.trim();
+    if (q.length < 3) { box.innerHTML = ''; return; }
+    tm = setTimeout(async () => {
+      box.innerHTML = '<div class="mut">Mencari…</div>';
+      try { const { data } = await sb.functions.invoke('ongkir-jnt', { body:{ action:'search', q } });
+        if (inp.value.trim() !== q) return;
+        list = (data?.data || []).filter(d => d.zip_code && d.zip_code !== '0');
+        box.innerHTML = list.length ? `<div class="sugg">${list.map((d,i)=>`<div data-i="${i}"><b>${esc(d.zip_code)}</b> · ${esc(judulKata([d.subdistrict_name,d.district_name,d.city_name].filter(Boolean).join(', ')))}</div>`).join('')}</div>`
+          : `<div class="mut">${data?.ok === false ? 'Pencarian kode pos belum tersedia, silakan isi manual.' : 'Tidak ditemukan. Coba nama kelurahan atau kecamatan lain.'}</div>`;
+        box.querySelectorAll('[data-i]').forEach(x => x.onclick = () => { const d = list[+x.dataset.i];
+          pilih({ kelurahan: judulKata(d.subdistrict_name), kecamatan: judulKata(d.district_name), kota: judulKata(d.city_name), kodepos: String(d.zip_code), raw: d });
+          inp.value = ''; box.innerHTML = ''; toast(`Kode pos ${d.zip_code} dipilih`); });
+      } catch { box.innerHTML = '<div class="mut">Pencarian kode pos belum tersedia, silakan isi manual.</div>'; }
+    }, 450); };
+}
 function viewProfil(){
   const p = S.profile || {};
   app.innerHTML = `<div class="auth card" style="max-width:520px"><h1>Profil</h1><p class="mut">${esc(S.session.user.email)}</p>
@@ -884,10 +906,13 @@ function viewProfil(){
     <label>No. HP / WhatsApp</label><input name="no_hp" value="${esc(p.no_hp)}">
     <label>Alamat</label><textarea name="alamat" rows="2">${esc(p.alamat)}</textarea>
     <div class="row"><div><label>Kecamatan</label><input name="kecamatan" value="${esc(p.kecamatan)}"></div><div><label>Kota</label><input name="kota" value="${esc(p.kota)}"></div></div>
-    <label>Kode pos</label><input name="kodepos" value="${esc(p.kodepos)}">
+    <label>Kode pos</label><input name="kodepos" value="${esc(p.kodepos)}" inputmode="numeric">
+    <div class="mut" style="margin-top:6px">Tidak tahu kode pos? Ketik nama kelurahan / kecamatan:</div>
+    <input id="cariWil" placeholder="mis. Kalirungkut atau Rungkut" autocomplete="off"><div id="wilSug"></div>
     <button class="btn blk" style="margin-top:14px">Simpan</button></form>
     <h2>Ganti password</h2><div class="row"><input id="pw" type="password" placeholder="Password baru (min. 6)"><button class="btn o" style="flex:none" onclick="gantiPw()">Ganti</button></div>
     <button class="btn g blk" style="margin-top:18px;color:var(--err)" onclick="logout()">Keluar dari akun</button></div>`;
+  pasangCariWilayah($('#cariWil'), $('#wilSug'), w => { const f = $('#f'); f.kecamatan.value = w.kecamatan; f.kota.value = w.kota; f.kodepos.value = w.kodepos; });
   $('#f').onsubmit = async e => { e.preventDefault(); try { ok(await sb.from('profiles').update(Object.fromEntries(new FormData(e.target))).eq('id',S.session.user.id)); await loadProfile(); toast('Profil disimpan'); } catch(er){ fail(er); } };
 }
 async function gantiPw(){ const pw = $('#pw').value; if (pw.length<6) return toast('Minimal 6 karakter', true); const { error } = await sb.auth.updateUser({ password:pw }); if (error) return fail(error); await sb.from('profiles').update({ wajib_ganti_pw:false }).eq('id', S.session.user.id); toast('Password diganti'); }
