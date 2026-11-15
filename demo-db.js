@@ -157,6 +157,7 @@
   /* ---------- RPC (logika sama dengan fungsi SQL) ---------- */
   const log = (member_id, delta, saldo, ket) => DB.point_logs.push({ id: DB.seq.point_logs++, member_id, delta, saldo_akhir: saldo, keterangan: ket || '', oleh: session()?.user.id, created_at: now() });
   const RPC = {
+    admin_list_emails() { return DB.users.map(u => ({ id: u.id, email: u.email })); },
     create_order({ p_items, p_kirim }) {
       const s = session(); if (!s) throw new Error('Silakan login');
       if (!p_items.length) throw new Error('Keranjang kosong');

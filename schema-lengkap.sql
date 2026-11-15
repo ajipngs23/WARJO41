@@ -321,6 +321,13 @@ returns text language sql stable security definer set search_path = public as $$
 $$;
 
 -- ---------------- HAK EKSEKUSI FUNGSI ----------------
+create or replace function public.admin_list_emails()
+returns table(id uuid, email text) language sql stable security definer set search_path = public as $$
+  select u.id, u.email::text from auth.users u where public.is_admin();
+$$;
+revoke execute on function public.admin_list_emails() from public, anon;
+grant execute on function public.admin_list_emails() to authenticated;
+
 revoke execute on function public.handle_new_user() from public, anon, authenticated;
 revoke execute on function public.protect_profile() from public, anon, authenticated;
 revoke execute on function public.cek_akses_dp() from public, anon, authenticated;
