@@ -550,8 +550,6 @@ async function viewCheckout(){
     <label>Kota / kecamatan tujuan</label>
     <div id="tujuanBox"><input id="cari" placeholder="Ketik min. 3 huruf, mis. Wonokromo" value="${esc(p.kecamatan||p.kota)}"><div id="sugg"></div></div>
     <div class="row"><div><label>Kode pos</label><input id="kp" value="${esc(p.kodepos)}" inputmode="numeric"></div></div>
-    <div class="mut">Tidak tahu kode pos? <a href="javascript:void 0" onclick="this.parentNode.nextElementSibling.style.display='block';this.parentNode.style.display='none';$('#kpCari').focus()">Cari dari nama kelurahan / kecamatan</a></div>
-    <div style="display:none"><input id="kpCari" placeholder="mis. Kalirungkut atau Rungkut" autocomplete="off"><div id="kpSug"></div></div>
     <label>Catatan (opsional)</label><input id="ct">
     ${gosendAktif() ? `<h2>Kurir</h2>
     <label class="svc"><input type="radio" name="kr" value="jnt" checked onchange="pilihKurir()"><div style="flex:1"><img src="icons/kurir-jnt.png" alt="J&T Express" class="logo-kr"><div class="mut">Antar kota / luar kota</div></div></label>
@@ -582,7 +580,6 @@ async function viewCheckout(){
       <p class="mut" id="mbInfo">Setelah pesanan dibuat, QRIS pembayaran akan muncul. Bayar sesuai total, lalu kirim bukti bayar ke WhatsApp toko.</p>
     </div></div>`;
   pilihMetode(); // teks tombol sesuai metode bayar yang aktif
-  pasangCariWilayah($('#kpCari'), $('#kpSug'), w => { $('#kp').value = w.kodepos; });
   // cek apakah API ongkir aktif
   const t = await cekOngkirApi();
   if (!t) { CO.mode = 'manual'; drawTujuanManual(); }
@@ -909,7 +906,7 @@ function pasangCariWilayah(inp, box, pilih){
           : `<div class="mut">${data?.ok === false ? 'Pencarian kode pos belum tersedia, silakan isi manual.' : 'Tidak ditemukan. Coba nama kelurahan atau kecamatan lain.'}</div>`;
         box.querySelectorAll('[data-i]').forEach(x => x.onclick = () => { const d = list[+x.dataset.i];
           pilih({ kelurahan: judulKata(d.subdistrict_name), kecamatan: judulKata(d.district_name), kota: judulKata(d.city_name), kodepos: String(d.zip_code), raw: d });
-          inp.value = ''; box.innerHTML = ''; toast(`Kode pos ${d.zip_code} dipilih`); });
+          box.innerHTML = ''; toast(`Kode pos ${d.zip_code} terisi otomatis`); });
       } catch { box.innerHTML = '<div class="mut">Pencarian kode pos belum tersedia, silakan isi manual.</div>'; }
     }, 450); };
 }
@@ -920,14 +917,13 @@ function viewProfil(){
     <label>No. HP / WhatsApp</label><input name="no_hp" value="${esc(p.no_hp)}" required inputmode="numeric" pattern="0[0-9]{8,14}" maxlength="15" title="Hanya angka, diawali 0, 9–15 digit (mis. 081234567890)" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/^62/,'0')" placeholder="08xxxxxxxxxx">
     ${S.balikCheckout && profilKurang(p).length ? `<div class="card" style="box-shadow:none;border:1px solid var(--pri);background:var(--pri-l);padding:10px;margin:6px 0">📝 Lengkapi <b>${profilKurang(p).join(' & ')}</b> untuk melanjutkan pesanan.</div>` : ''}
     <label>Alamat</label><textarea name="alamat" rows="2" placeholder="Nama jalan, nomor rumah, RT/RW, kelurahan">${esc(p.alamat)}</textarea>
-    <div class="row"><div><label>Kecamatan</label><input name="kecamatan" value="${esc(p.kecamatan)}"></div><div><label>Kota</label><input name="kota" value="${esc(p.kota)}"></div></div>
-    <label>Kode pos</label><input name="kodepos" value="${esc(p.kodepos)}" inputmode="numeric">
-    <div class="mut" style="margin-top:6px">Tidak tahu kode pos? Ketik nama kelurahan / kecamatan:</div>
-    <input id="cariWil" placeholder="mis. Kalirungkut atau Rungkut" autocomplete="off"><div id="wilSug"></div>
+    <label>Kecamatan / kelurahan</label><input name="kecamatan" value="${esc(p.kecamatan)}" placeholder="Ketik lalu pilih, mis. Rungkut" autocomplete="off"><div id="wilSug"></div>
+    <div class="row"><div><label>Kota</label><input name="kota" value="${esc(p.kota)}"></div><div><label>Kode pos</label><input name="kodepos" value="${esc(p.kodepos)}" inputmode="numeric" maxlength="5" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div></div>
+    <div class="mut">Kota & kode pos terisi otomatis setelah memilih kecamatan dari daftar.</div>
     <button class="btn blk" style="margin-top:14px">Simpan</button></form>
     <h2>Ganti password</h2><div class="row"><input id="pw" type="password" placeholder="Password baru (min. 6)"><button class="btn o" style="flex:none" onclick="gantiPw()">Ganti</button></div>
     <button class="btn g blk" style="margin-top:18px;color:var(--err)" onclick="logout()">Keluar dari akun</button></div>`;
-  pasangCariWilayah($('#cariWil'), $('#wilSug'), w => { const f = $('#f'); f.kecamatan.value = w.kecamatan; f.kota.value = w.kota; f.kodepos.value = w.kodepos; });
+  pasangCariWilayah($('#f').kecamatan, $('#wilSug'), w => { const f = $('#f'); f.kecamatan.value = w.kecamatan; f.kota.value = w.kota; f.kodepos.value = w.kodepos; });
   $('#f').onsubmit = async e => { e.preventDefault(); try { const fd = Object.fromEntries(new FormData(e.target));
     if (S.balikCheckout && !fd.alamat.trim()) { e.target.alamat.focus(); return toast('Alamat wajib diisi untuk melanjutkan pesanan', true); }
     if (!hpValid(fd.no_hp)) { e.target.no_hp.focus(); return toast('No. HP hanya angka, diawali 0 (mis. 081234567890)', true); }
