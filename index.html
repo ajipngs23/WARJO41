@@ -919,7 +919,6 @@ function viewProfil(){
     <label>Alamat</label><textarea name="alamat" rows="2" placeholder="Nama jalan, nomor rumah, RT/RW, kelurahan">${esc(p.alamat)}</textarea>
     <label>Kecamatan / kelurahan</label><input name="kecamatan" value="${esc(p.kecamatan)}" placeholder="Ketik lalu pilih, mis. Rungkut" autocomplete="off"><div id="wilSug"></div>
     <div class="row"><div><label>Kota</label><input name="kota" value="${esc(p.kota)}"></div><div><label>Kode pos</label><input name="kodepos" value="${esc(p.kodepos)}" inputmode="numeric" maxlength="5" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div></div>
-    <div class="mut">Kota & kode pos terisi otomatis setelah memilih kecamatan dari daftar.</div>
     <button class="btn blk" style="margin-top:14px">Simpan</button></form>
     <h2>Ganti password</h2><div class="row"><input id="pw" type="password" placeholder="Password baru (min. 6)"><button class="btn o" style="flex:none" onclick="gantiPw()">Ganti</button></div>
     <button class="btn g blk" style="margin-top:18px;color:var(--err)" onclick="logout()">Keluar dari akun</button></div>`;
