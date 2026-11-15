@@ -1,11 +1,12 @@
 // Supabase Edge Function: ongkir-jnt
 // Proxy ke API RajaOngkir (Komerce): ongkir & lacak J&T + tarif GoSend (Delivery API).
-// Secret:  RAJAONGKIR_KEY (Shipping Cost)  ·  KOMERCE_DELIVERY_KEY (Delivery API, untuk GoSend;
+// Secret:  BITESHIP_KEY (tarif GoSend/Gojek via Biteship)  ·  RAJAONGKIR_KEY (Shipping Cost)  ·  KOMERCE_DELIVERY_KEY (Delivery API, untuk GoSend;
 //          bila kosong dicoba pakai RAJAONGKIR_KEY)
 // Develop Program By Nurman Catra
 
 const BASE = "https://rajaongkir.komerce.id/api/v1";
 const DBASE = "https://api.collaborator.komerce.id/tariff/api/v1";
+const BBASE = "https://api.biteship.com/v1";
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -23,7 +24,30 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    console.log("action", body?.action, "dkey", !!dkey, "key", !!key);
+    console.log("action", body?.action, "bkey", !!Deno.env.get("BITESHIP_KEY"), "dkey", !!dkey, "key", !!key);
+
+    // ===== GoSend via Biteship (rates by coordinates) =====
+    if (body.action === "biteship") {
+      const bkey = Deno.env.get("BITESHIP_KEY") || "";
+      if (!bkey) return json({ ok: false, error: "BITESHIP_KEY belum diset" });
+      const num = (v: unknown) => Number(v);
+      const [ola, olo, dla, dlo] = [num(body.origin_lat), num(body.origin_lng), num(body.dest_lat), num(body.dest_lng)];
+      if (![ola, olo, dla, dlo].every((v) => isFinite(v) && v !== 0)) return json({ ok: false, error: "Koordinat tidak valid" });
+      const r = await fetch(`${BBASE}/rates/couriers`, {
+        method: "POST",
+        headers: { authorization: bkey, "content-type": "application/json" },
+        body: JSON.stringify({
+          origin_latitude: ola, origin_longitude: olo, destination_latitude: dla, destination_longitude: dlo,
+          couriers: "gojek",
+          items: [{ name: "Pesanan WARJO41", value: Math.max(1, Math.round(num(body.value) || 1)), weight: Math.max(1, Math.round(num(body.weight) || 1000)), quantity: 1 }],
+        }),
+      });
+      const d = await r.json().catch(() => ({}));
+      const data = (d?.pricing || []).filter((x: any) => String(x.courier_code).toLowerCase() === "gojek").map((x: any) => ({
+        service: x.courier_service_code, name: x.courier_service_name, price: x.price, duration: x.duration,
+      }));
+      return json({ ok: r.ok && d?.success !== false, data, error: r.ok && d?.success !== false ? null : d?.error || `HTTP ${r.status}` });
+    }
 
     // ===== GoSend via Komerce Delivery API =====
     if (body.action === "dsearch" || body.action === "gosend") {
