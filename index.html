@@ -530,11 +530,12 @@ async function viewCheckout(){
   if (!S.cart.length) { location.hash = '#/keranjang'; return; }
   await loadProfile(); // ambil akses DP terbaru dari admin
   const p = S.profile || {};
-  if (!String(p.alamat||'').trim()) { // alamat boleh kosong saat daftar, tapi wajib sebelum order
+  const kurang = profilKurang(p);
+  if (kurang.length) { // HP & alamat wajib lengkap sebelum order
     S.balikCheckout = true;
-    app.innerHTML = `<h1>Checkout</h1><div class="card empty">Lengkapi alamat di profil Anda terlebih dahulu.<br><br><a class="btn" href="#/profil">Lengkapi profil</a></div>`;
-    modal(`<div style="text-align:center"><div style="font-size:40px">📍</div><h2 style="margin:6px 0">Lengkapi profil alamat Anda</h2>
-      <p class="mut">Sebelum memesan, isi dulu alamat pengiriman di profil (alamat, kecamatan, kota & kode pos).</p>
+    app.innerHTML = `<h1>Checkout</h1><div class="card empty">Lengkapi profil Anda terlebih dahulu.<br><br><a class="btn" href="#/profil">Lengkapi profil</a></div>`;
+    modal(`<div style="text-align:center"><div style="font-size:40px">📝</div><h2 style="margin:6px 0">Segera lengkapi profil Anda</h2>
+      <p class="mut">Sebelum memesan, lengkapi dulu: <b>${kurang.join(' & ')}</b>.</p>
       <a class="btn blk" style="display:block;text-align:center" href="#/profil" onclick="closeModal()">Lengkapi profil sekarang</a>
       <button class="btn g blk" style="margin-top:8px" onclick="closeModal();location.hash='#/keranjang'">Nanti saja</button></div>`);
     return;
@@ -891,6 +892,8 @@ async function tukar(id, nama, poin){
 }
 
 /* ================= MEMBER: PROFIL ================= */
+const hpValid = h => /^0[0-9]{8,14}$/.test(String(h||'').trim());
+const profilKurang = p => [!hpValid(p?.no_hp) && 'No. HP (angka, diawali 0)', !String(p?.alamat||'').trim() && 'alamat pengiriman'].filter(Boolean);
 /* ---------- cari wilayah → isi kecamatan, kota & kode pos otomatis (RajaOngkir) ---------- */
 const judulKata = t => String(t||'').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
 function pasangCariWilayah(inp, box, pilih){
@@ -915,7 +918,7 @@ function viewProfil(){
   app.innerHTML = `<div class="auth card" style="max-width:520px"><h1>Profil</h1><p class="mut">${esc(S.session.user.email)}</p>
     <form id="f"><label>Nama</label><input name="nama" value="${esc(p.nama)}" required>
     <label>No. HP / WhatsApp</label><input name="no_hp" value="${esc(p.no_hp)}" required inputmode="numeric" pattern="0[0-9]{8,14}" maxlength="15" title="Hanya angka, diawali 0, 9–15 digit (mis. 081234567890)" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/^62/,'0')" placeholder="08xxxxxxxxxx">
-    ${S.balikCheckout && !String(p.alamat||'').trim() ? '<div class="card" style="box-shadow:none;border:1px solid var(--pri);background:var(--pri-l);padding:10px;margin:6px 0">📍 Isi alamat pengiriman Anda untuk melanjutkan pesanan.</div>' : ''}
+    ${S.balikCheckout && profilKurang(p).length ? `<div class="card" style="box-shadow:none;border:1px solid var(--pri);background:var(--pri-l);padding:10px;margin:6px 0">📝 Lengkapi <b>${profilKurang(p).join(' & ')}</b> untuk melanjutkan pesanan.</div>` : ''}
     <label>Alamat</label><textarea name="alamat" rows="2" placeholder="Nama jalan, nomor rumah, RT/RW, kelurahan">${esc(p.alamat)}</textarea>
     <div class="row"><div><label>Kecamatan</label><input name="kecamatan" value="${esc(p.kecamatan)}"></div><div><label>Kota</label><input name="kota" value="${esc(p.kota)}"></div></div>
     <label>Kode pos</label><input name="kodepos" value="${esc(p.kodepos)}" inputmode="numeric">
@@ -927,6 +930,7 @@ function viewProfil(){
   pasangCariWilayah($('#cariWil'), $('#wilSug'), w => { const f = $('#f'); f.kecamatan.value = w.kecamatan; f.kota.value = w.kota; f.kodepos.value = w.kodepos; });
   $('#f').onsubmit = async e => { e.preventDefault(); try { const fd = Object.fromEntries(new FormData(e.target));
     if (S.balikCheckout && !fd.alamat.trim()) { e.target.alamat.focus(); return toast('Alamat wajib diisi untuk melanjutkan pesanan', true); }
+    if (!hpValid(fd.no_hp)) { e.target.no_hp.focus(); return toast('No. HP hanya angka, diawali 0 (mis. 081234567890)', true); }
     ok(await sb.from('profiles').update(fd).eq('id',S.session.user.id)); await loadProfile(); toast('Profil disimpan');
     if (S.balikCheckout && S.cart.length) { S.balikCheckout = false; location.hash = '#/checkout'; } } catch(er){ fail(er); } };
 }
