@@ -110,6 +110,7 @@ th{background:#fafafa;font-size:12.5px;color:var(--mut);font-weight:500}
 .stats{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:14px}
 .stat{background:#fff;border-radius:var(--r);padding:14px;color:var(--tx);box-shadow:0 1px 2px #0000000d}
 .stat b{display:block;font-size:22px;margin-top:4px}
+.logo-kr{height:24px;width:auto;display:block;margin-bottom:3px}.logo-kr.sm{height:16px;display:inline-block;vertical-align:middle;margin:0}
 .tema-sw{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}.tema-sw button{width:44px;height:44px;border-radius:10px;border:2px solid #fff;box-shadow:0 0 0 1px var(--bd);cursor:pointer}.tema-sw button.on{box-shadow:0 0 0 2px var(--tx)}
 .tema-prev{border-radius:8px;overflow:hidden;border:1px solid var(--bd);margin-top:8px}.tema-prev .h{padding:10px 12px;color:#fff;font-weight:700}.tema-prev .b{padding:14px 12px;color:#fff;font-weight:700}.tema-prev .f{padding:10px 12px;background:#fff;display:flex;gap:8px;align-items:center}
 .poinbox{background:linear-gradient(var(--gdeg),var(--g1),var(--g2) 60%,var(--g3));color:#fff;border-radius:8px;padding:20px;margin-bottom:14px}
@@ -543,8 +544,8 @@ async function viewCheckout(){
     <div style="display:none"><input id="kpCari" placeholder="mis. Kalirungkut atau Rungkut" autocomplete="off"><div id="kpSug"></div></div>
     <label>Catatan (opsional)</label><input id="ct">
     ${gosendAktif() ? `<h2>Kurir</h2>
-    <label class="svc"><input type="radio" name="kr" value="jnt" checked onchange="pilihKurir()"><div style="flex:1"><b>J&T Express</b><div class="mut">Antar kota / luar kota</div></div></label>
-    <label class="svc"><input type="radio" name="kr" value="gosend" onchange="pilihKurir()"><div style="flex:1"><b>GoSend (Gojek)</b><div class="mut">Instant / Same Day · dalam kota, maks ${GS_TARIF.maksKm} km</div></div></label>
+    <label class="svc"><input type="radio" name="kr" value="jnt" checked onchange="pilihKurir()"><div style="flex:1"><img src="icons/kurir-jnt.png" alt="J&T Express" class="logo-kr"><div class="mut">Antar kota / luar kota</div></div></label>
+    <label class="svc"><input type="radio" name="kr" value="gosend" onchange="pilihKurir()"><div style="flex:1"><img src="icons/kurir-gosend.png" alt="GoSend" class="logo-kr"><div class="mut">Instant / Same Day · dalam kota, maks ${GS_TARIF.maksKm} km</div></div></label>
     <div id="gsBox" style="display:none;margin-top:8px">
       <label>Titik lokasi penerima (wajib untuk GoSend)</label>
       <button type="button" class="btn o blk" onclick="gsGps()">📍 Pakai lokasi saya sekarang (GPS)</button>
@@ -619,7 +620,7 @@ function drawSvc(){
   if (CO.kurir === 'gosend' && !CO.opsi.length) { $('#svc').innerHTML = `<span class="mut">${esc(CO.gsPesan||'Pilih titik lokasi penerima dulu.')}</span>`; CO.svc=null; hitungTotal(); return; }
   if (!CO.opsi.length) { $('#svc').innerHTML = '<span class="mut">Layanan J&T tidak tersedia untuk tujuan ini.</span>'; CO.svc=null; hitungTotal(); return; }
   $('#svc').innerHTML = CO.opsi.map((o,i)=>`<label class="svc"><input type="radio" name="sv" value="${i}" ${i===0?'checked':''} onchange="CO.svc=CO.opsi[${i}];hitungTotal()">
-    <div style="flex:1"><b>${CO.kurir==='gosend'?'GoSend':'J&T'} ${esc(o.layanan)}</b> <span class="mut">${esc(o.ket||'')}</span><div class="mut">${o.etd?`Estimasi ${esc(o.etd)}`:''}</div></div><b>${rp(o.ongkir)}</b></label>`).join('');
+    <div style="flex:1"><img src="icons/kurir-${CO.kurir==='gosend'?'gosend':'jnt'}.png" alt="" class="logo-kr sm"> <b>${esc(o.layanan)}</b> <span class="mut">${esc(o.ket||'')}</span><div class="mut">${o.etd?`Estimasi ${esc(o.etd)}`:''}</div></div><b>${rp(o.ongkir)}</b></label>`).join('');
   CO.svc = CO.opsi[0]; hitungTotal();
 }
 function hitungTotal(){ const o = CO.svc?.ongkir || 0; $('#ong').textContent = CO.svc ? rp(o) : '-'; $('#tot').textContent = rp(CO.sub + o);  if ($('#dpOn')) ubahDp(); }
@@ -966,7 +967,7 @@ function drawAdminPesanan(){
       <td><b>${esc(o.kode)}</b><div class="mut">${tgl(o.created_at)}</div>${o.dicetak_at?'<div class="mut">🖨️ sudah dicetak</div>':''}</td>
       <td><b>${esc(o.penerima_nama)}</b> · ${esc(o.penerima_hp)}<div class="mut">${esc(o.penerima_alamat)}, ${esc([o.penerima_kecamatan,o.penerima_kota,o.penerima_kodepos].filter(Boolean).join(', '))}</div><div class="mut">Member: ${esc(o.profiles?.nama||'-')}</div></td>
       <td>${o.items.map(i=>`${namaItem(i)} ×${i.qty}`).join('<br>')}<div class="mut">${kgJnt(o.berat_gram)} kg</div></td>
-      <td>${o.kurir==='GoSend'?`<b>GoSend</b> ${esc(o.layanan)}${o.tujuan_id?` <a target="_blank" href="https://www.google.com/maps?q=${esc(o.tujuan_id)}">📍</a>`:''}`:esc(o.layanan)}<br>${rp(o.ongkir)}</td><td><b>${rp(o.total)}</b><div class="mut">${o.metode_bayar==='transfer'?'🏦 Transfer':'▦ QRIS'}</div><div style="margin-top:3px">${chipBayar(o)}</div></td>
+      <td><img src="icons/kurir-${o.kurir==='GoSend'?'gosend':'jnt'}.png" alt="${o.kurir==='GoSend'?'GoSend':'J&T'}" class="logo-kr sm" style="display:block;margin-bottom:2px">${o.kurir==='GoSend'?`${esc(o.layanan)}${o.tujuan_id?` <a target="_blank" href="https://www.google.com/maps?q=${esc(o.tujuan_id)}">📍</a>`:''}`:esc(o.layanan)}<br>${rp(o.ongkir)}</td><td><b>${rp(o.total)}</b><div class="mut">${o.metode_bayar==='transfer'?'🏦 Transfer':'▦ QRIS'}</div><div style="margin-top:3px">${chipBayar(o)}</div></td>
       <td><span class="st ${o.status}">${o.status}</span>${o.resi?`<div class="mut">Resi: ${esc(o.resi)} · <a href="#" onclick="lacakResi('${esc(o.resi)}');return false">lacak</a></div>`:''}</td>
       <td style="white-space:nowrap">${aksiOrder(o)}</td></tr>`).join('')}</table></div>`:'<div class="empty">Tidak ada pesanan.</div>'}`;
   $('#ap').value = autoPrint(); $('#ap').onchange = e => { localStorage.setItem('autoPrint', e.target.value); toast('Disimpan'); };
@@ -1045,7 +1046,7 @@ async function cetakLabel(ids){
   if (!os.length) return;
   const st = S.settings;
   const lbl = o => `<div class="lbl">
-    <div class="hd"><div class="jnt">${o.kurir==='GoSend'?'GOSEND INSTANT':'J&amp;T EXPRESS'}</div><div class="svc">${esc(o.layanan||'EZ')}</div></div>
+    <div class="hd"><div class="jnt"><img src="${location.origin}/icons/kurir-${o.kurir==='GoSend'?'gosend':'jnt'}.png" alt="${o.kurir==='GoSend'?'GOSEND':'J&amp;T EXPRESS'}" style="height:9mm;display:block"></div><div class="svc">${esc(o.layanan||'EZ')}</div></div>
     ${o.resi?`<div class="bc">${barcode(o.resi,55)}<div class="bt">${esc(o.resi)}</div></div>`:`<div class="bc"><div class="noresi">RESI: ______________________</div></div>`}
     <div class="sec"><div class="t">PENERIMA</div><div class="nm">${esc(o.penerima_nama)}</div><div>${esc(o.penerima_hp)}</div>
       <div>${esc(o.penerima_alamat)}</div><div class="kt">${esc([o.penerima_kecamatan,o.penerima_kota].filter(Boolean).join(', ').toUpperCase())} ${esc(o.penerima_kodepos)}</div></div>
