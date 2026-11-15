@@ -544,7 +544,7 @@ async function viewCheckout(){
   const berat = S.cart.reduce((a,b)=>a+b.berat*b.qty,0), sub = S.cart.reduce((a,b)=>a+b.harga*b.qty,0);
   CO = { berat, sub, tarif, mode:'api', tujuan:null, svc:null, opsi:[], kurir:'jnt', gs:null, opsiJnt:[] };
   app.innerHTML = `<h1>Checkout</h1><div class="two"><div class="card">
-    <h2 style="margin-top:0">Alamat pengiriman</h2>
+    <h2 style="margin-top:0">Alamat penerima</h2>
     <div class="row"><div><label>Nama penerima</label><input id="nm" value="${esc(p.nama)}"></div><div><label>No. HP</label><input id="hp" value="${esc(p.no_hp)}" inputmode="numeric" pattern="0[0-9]{8,14}" maxlength="15" title="Hanya angka, diawali 0, 9–15 digit (mis. 081234567890)" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/^62/,'0')" placeholder="08xxxxxxxxxx"></div></div>
     <label>Alamat lengkap (jalan, no rumah, RT/RW, kelurahan)</label><textarea id="al" rows="2">${esc(p.alamat)}</textarea>
     <label>Kota / kecamatan tujuan</label>
@@ -890,7 +890,7 @@ async function tukar(id, nama, poin){
 
 /* ================= MEMBER: PROFIL ================= */
 const hpValid = h => /^0[0-9]{8,14}$/.test(String(h||'').trim());
-const profilKurang = p => [!hpValid(p?.no_hp) && 'No. HP (angka, diawali 0)', !String(p?.alamat||'').trim() && 'alamat pengiriman'].filter(Boolean);
+const profilKurang = p => [!hpValid(p?.no_hp) && 'No. HP (angka, diawali 0)', !String(p?.alamat||'').trim() && 'alamat penerima'].filter(Boolean);
 /* ---------- cari wilayah → isi kecamatan, kota & kode pos otomatis (RajaOngkir) ---------- */
 const judulKata = t => String(t||'').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
 function pasangCariWilayah(inp, box, pilih){
@@ -916,7 +916,7 @@ function viewProfil(){
     <form id="f"><label>Nama</label><input name="nama" value="${esc(p.nama)}" required>
     <label>No. HP / WhatsApp</label><input name="no_hp" value="${esc(p.no_hp)}" required inputmode="numeric" pattern="0[0-9]{8,14}" maxlength="15" title="Hanya angka, diawali 0, 9–15 digit (mis. 081234567890)" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/^62/,'0')" placeholder="08xxxxxxxxxx">
     ${S.balikCheckout && profilKurang(p).length ? `<div class="card" style="box-shadow:none;border:1px solid var(--pri);background:var(--pri-l);padding:10px;margin:6px 0">📝 Lengkapi <b>${profilKurang(p).join(' & ')}</b> untuk melanjutkan pesanan.</div>` : ''}
-    <label>Alamat</label><textarea name="alamat" rows="2" placeholder="Nama jalan, nomor rumah, RT/RW, kelurahan">${esc(p.alamat)}</textarea>
+    <label>Alamat penerima</label><textarea name="alamat" rows="2" placeholder="Nama jalan, nomor rumah, RT/RW, kelurahan">${esc(p.alamat)}</textarea>
     <label>Kecamatan / kelurahan</label><input name="kecamatan" value="${esc(p.kecamatan)}" placeholder="Ketik lalu pilih, mis. Rungkut" autocomplete="off"><div id="wilSug"></div>
     <div class="row"><div><label>Kota</label><input name="kota" value="${esc(p.kota)}"></div><div><label>Kode pos</label><input name="kodepos" value="${esc(p.kodepos)}" inputmode="numeric" maxlength="5" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div></div>
     <button class="btn blk" style="margin-top:14px">Simpan</button></form>
