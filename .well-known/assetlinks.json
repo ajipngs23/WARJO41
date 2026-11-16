@@ -1,8 +1,11 @@
 [{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "dev.workers.ajipngs23.warjo41.twa",
-        "sha256_cert_fingerprints": ["01:DA:EA:AA:C2:2C:2F:F6:1B:5C:E0:73:32:3B:1B:61:4E:3E:AB:E4:A4:51:7C:6C:3F:19:65:8E:AC:A2:BA:AD"]
-      }
-    }]
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "dev.workers.ajipngs23.warjo41.twa",
+    "sha256_cert_fingerprints": [
+      "DE:B6:12:67:25:B1:2C:E6:A9:56:ED:35:6E:4C:45:3E:BA:08:46:98:6A:5F:6F:F6:9F:31:E7:6C:C5:07:33:3E",
+      "01:DA:EA:AA:C2:2C:2F:F6:1B:5C:E0:73:32:3B:1B:61:4E:3E:AB:E4:A4:51:7C:6C:3F:19:65:8E:AC:A2:BA:AD"
+    ]
+  }
+}]
