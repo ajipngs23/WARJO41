@@ -842,17 +842,22 @@ async function viewPesanan(){
 async function batalOrder(id){ if(!confirm('Batalkan pesanan ini?')) return; try{ ok(await sb.rpc('cancel_order',{p_id:id})); toast('Pesanan dibatalkan'); route(); }catch(e){fail(e)} }
 
 /* ================= LACAK RESI J&T ================= */
+async function lacakDiJnt(resi){ // salin resi lalu buka halaman lacak resmi J&T
+  try { await navigator.clipboard.writeText(resi); toast('Resi disalin — tempel di halaman J&T'); } catch { toast('Salin resi: '+resi); }
+  window.open('https://jet.co.id/track', '_blank', 'noopener');
+}
 async function lacakResi(resi){
   modal(`<h2 style="margin-top:0">Lacak Paket J&T</h2><div class="row" style="flex:none;gap:6px"><b style="font-size:16px;flex:none">${esc(resi)}</b>
     <button class="btn g sm" style="flex:none" onclick="navigator.clipboard?.writeText('${esc(resi)}');toast('Resi disalin')">Salin</button></div>
     <div id="lk" style="margin-top:12px" class="mut">Mengambil data dari J&T…</div>
-    <button class="btn g blk" style="margin-top:12px" onclick="closeModal()">Tutup</button>`);
+    <button class="btn blk" style="margin-top:12px;background:#e60012;border-color:#e60012" onclick="lacakDiJnt('${esc(resi)}')">📦 Lacak di J&T</button>
+    <button class="btn g blk" style="margin-top:8px" onclick="closeModal()">Tutup</button>`);
   let data = null, err = '';
   try { const r = await sb.functions.invoke('ongkir-jnt', { body:{ action:'track', awb:resi } }); data = r.data; if (!data?.ok) err = data?.error || r.error?.message || ''; }
   catch(e){ err = e.message; }
   const box = $('#lk'); if (!box) return;
-  const cadangan = `<div class="mut" style="margin-top:10px">Bisa juga cek langsung di <a href="https://jet.co.id/track" target="_blank">jet.co.id/track</a> (tempel nomor resi).</div>`;
-  if (!data?.ok) { box.innerHTML = `<div style="color:var(--err)">Data pelacakan belum tersedia.</div><div class="mut">${/not found|tidak ditemukan|404|invalid awb/i.test(err)?'Resi belum terdaftar di sistem J&T — biasanya muncul beberapa jam setelah paket diserahkan.':esc(err)}</div>${cadangan}`; return; }
+  const cadangan = `<div class="mut" style="margin-top:10px">Tekan <b>Lacak di J&T</b>: nomor resi otomatis tersalin, tinggal tempel di halaman J&T.</div>`;
+  if (!data?.ok) { box.innerHTML = `<div style="color:var(--err)">Data pelacakan belum tersedia di sini.</div><div class="mut">${/not found|tidak ditemukan|404|invalid awb/i.test(err)?'Resi belum terdaftar di sistem J&T — biasanya muncul beberapa jam setelah paket diserahkan.':/limit|quota|kuota/i.test(err)?'Pelacakan otomatis sedang penuh hari ini.':esc(err)}</div>${cadangan}`; return; }
   const d = data.data || {}, sm = d.summary || {}, ds = d.delivery_status || {};
   const man = (d.manifest || []).slice().sort((a,b)=> (b.manifest_date+' '+b.manifest_time).localeCompare(a.manifest_date+' '+a.manifest_time));
   box.innerHTML = `<div class="card" style="background:${d.delivered?'#e6f7f4':'var(--pri-l)'};box-shadow:none;margin-bottom:10px">
