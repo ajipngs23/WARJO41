@@ -1,6 +1,7 @@
 // Supabase Edge Function: ongkir-jnt
 // Proxy ke API RajaOngkir (Komerce): ongkir & lacak J&T + tarif GoSend (Delivery API).
-// Secret:  BITESHIP_KEY (tarif GoSend/Gojek via Biteship)  ·  RAJAONGKIR_KEY (Shipping Cost)  ·  KOMERCE_DELIVERY_KEY (Delivery API, untuk GoSend;
+// Secret:  BITESHIP_KEY (tarif GoSend/Gojek via Biteship)  ·  RAJAONGKIR_KEY, RAJAONGKIR_KEY_2, _3… (Shipping Cost,
+//          dipakai bergantian: bila kuota/limit key 1 habis otomatis pindah ke key berikutnya)  ·  KOMERCE_DELIVERY_KEY (Delivery API, untuk GoSend;
 //          bila kosong dicoba pakai RAJAONGKIR_KEY)
 // Develop Program By Nurman Catra
 
@@ -12,19 +13,43 @@ const cors = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+// ---- RajaOngkir multi-key: coba key 1, bila limit/ditolak pindah ke key berikutnya ----
+const habis = new Map<string, string>(); // key → tanggal (WIB) kuota habis, berlaku selama instance hidup
+const hariIni = () => new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10);
+function roKeys(): string[] {
+  const ks = [Deno.env.get("RAJAONGKIR_KEY")];
+  for (let i = 2; i <= 9; i++) ks.push(Deno.env.get(`RAJAONGKIR_KEY_${i}`));
+  return ks.filter((k): k is string => !!k && !!k.trim()).map((k) => k.trim());
+}
+const kenaLimit = (status: number, msg: string) => status === 429 || status === 401 || status === 403 || /limit|quota|kuota|exceeded|invalid api key|unauthor/i.test(msg);
+async function roFetch(url: string, init: RequestInit = {}): Promise<{ r: Response; d: any; ke: number }> {
+  const keys = roKeys(); const tgl = hariIni();
+  const urut = [...keys.filter((k) => habis.get(k) !== tgl), ...keys.filter((k) => habis.get(k) === tgl)];
+  let last: { r: Response; d: any; ke: number } | null = null;
+  for (const k of urut) {
+    const r = await fetch(url, { ...init, headers: { ...(init.headers as Record<string, string> || {}), key: k } });
+    const d = await r.json().catch(() => ({}));
+    const ke = keys.indexOf(k) + 1;
+    last = { r, d, ke };
+    if (!kenaLimit(r.status, String(d?.meta?.message || ""))) { habis.delete(k); return last; }
+    habis.set(k, tgl); console.log(`RajaOngkir key ${ke} limit/ditolak: ${d?.meta?.message || r.status} → coba key berikutnya`);
+  }
+  return last!;
+}
+
 const json = (b: any, s = 200) => {
-  console.log(JSON.stringify({ ok: b?.ok, error: b?.error ?? null, n: Array.isArray(b?.data) ? b.data.length : undefined })); // log status (tanpa key)
+  console.log(JSON.stringify({ ok: b?.ok, key_ke: b?.key_ke, error: b?.error ?? null, n: Array.isArray(b?.data) ? b.data.length : undefined })); // log status (tanpa key)
   return new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
 };
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
-  const key = Deno.env.get("RAJAONGKIR_KEY") || "";
+  const key = roKeys()[0] || "";
   const dkey = Deno.env.get("KOMERCE_DELIVERY_KEY") || key;
 
   try {
     const body = await req.json();
-    console.log("action", body?.action, "bkey", !!Deno.env.get("BITESHIP_KEY"), "dkey", !!dkey, "key", !!key);
+    console.log("action", body?.action, "bkey", !!Deno.env.get("BITESHIP_KEY"), "dkey", !!dkey, "keys", roKeys().length);
 
     // ===== GoSend via Biteship (rates by coordinates) =====
     if (body.action === "biteship") {
@@ -98,11 +123,8 @@ Deno.serve(async (req) => {
     if (body.action === "search") {
       const q = String(body.q || "").trim();
       if (q.length < 3) return json({ ok: true, data: [] });
-      const r = await fetch(`${BASE}/destination/domestic-destination?search=${encodeURIComponent(q)}&limit=10&offset=0`, {
-        headers: { key },
-      });
-      const d = await r.json();
-      return json({ ok: r.ok, data: d.data || [], error: r.ok ? null : d?.meta?.message });
+      const { r, d, ke } = await roFetch(`${BASE}/destination/domestic-destination?search=${encodeURIComponent(q)}&limit=10&offset=0`);
+      return json({ ok: r.ok, key_ke: ke, data: d.data || [], error: r.ok ? null : d?.meta?.message });
     }
 
     // 2) hitung ongkir J&T
@@ -114,16 +136,15 @@ Deno.serve(async (req) => {
         courier: "jnt",
         price: "lowest",
       });
-      const r = await fetch(`${BASE}/calculate/domestic-cost`, {
+      const { r, d, ke } = await roFetch(`${BASE}/calculate/domestic-cost`, {
         method: "POST",
-        headers: { key, "Content-Type": "application/x-www-form-urlencoded" },
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: form,
       });
-      const d = await r.json();
       const data = (d.data || []).map((x: any) => ({
         service: x.service, description: x.description, cost: x.cost, etd: x.etd,
       }));
-      return json({ ok: r.ok, data, error: r.ok ? null : d?.meta?.message });
+      return json({ ok: r.ok, key_ke: ke, data, error: r.ok ? null : d?.meta?.message });
     }
 
     // 3) lacak resi J&T
@@ -131,13 +152,12 @@ Deno.serve(async (req) => {
       const awb = String(body.awb || "").trim().toUpperCase().replace(/\s+/g, "");
       if (!/^[A-Z0-9]{6,30}$/.test(awb)) return json({ ok: false, error: "Nomor resi tidak valid" });
       const qs = new URLSearchParams({ awb, courier: "jnt" });
-      const r = await fetch(`${BASE}/track/waybill?${qs}`, {
+      const { r, d, ke } = await roFetch(`${BASE}/track/waybill?${qs}`, {
         method: "POST",
-        headers: { key, "Content-Type": "application/x-www-form-urlencoded" },
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: qs,
       });
-      const d = await r.json().catch(() => ({}));
-      return json({ ok: r.ok && !!d?.data, data: d?.data || null, error: r.ok ? null : d?.meta?.message || `HTTP ${r.status}` });
+      return json({ ok: r.ok && !!d?.data, key_ke: ke, data: d?.data || null, error: r.ok ? null : d?.meta?.message || `HTTP ${r.status}` });
     }
 
     return json({ ok: false, error: "action tidak dikenal" }, 400);
