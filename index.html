@@ -665,24 +665,11 @@ async function hitungGosend(){
   const maxKg = GS_TARIF.maksKg, maxKm = GS_TARIF.maksKm;
   if (CO.berat / 1000 > maxKg) { CO.gsPesan = `Berat pesanan ${(CO.berat/1000).toLocaleString('id-ID')} kg melebihi batas GoSend (${maxKg} kg). Pilih J&T.`; drawSvc(); return; }
   if (!CO.gs) { drawSvc(); return; }
-  // 1) tarif asli Gojek via Biteship; bila gagal → tarif tetap per km
-  $('#svc').innerHTML = 'Cek tarif GoSend…';
   const nomor = CO.gsReq = (CO.gsReq || 0) + 1;
-  try {
-    const { data } = await sb.functions.invoke('ongkir-jnt', { body:{ action:'biteship', origin_lat:S.settings.toko_lat, origin_lng:S.settings.toko_lng,
-      dest_lat:CO.gs.la, dest_lng:CO.gs.lo, weight:CO.berat, value:CO.sub } });
-    if (nomor !== CO.gsReq) return; // ada titik lebih baru
-    const l = (data?.data || []).filter(x => Number(x.price) > 0);
-    if (data?.ok && l.length) {
-      $('#gsInfo').innerHTML = `Titik: ${CO.gs.la.toFixed(5)}, ${CO.gs.lo.toFixed(5)} · tarif resmi Gojek`;
-      CO.opsi = l.map(x => ({ layanan: x.name || x.service, ket:'tarif Gojek (Biteship)', ongkir: Number(x.price), etd: x.duration || '' }));
-      drawSvc(); return;
-    }
-    if (data?.ok && !l.length) { CO.gsPesan = 'GoSend tidak tersedia untuk titik ini (di luar jangkauan / berat). Pilih J&T.'; drawSvc(); return; }
-    console.warn('Tarif Biteship gagal, pakai tarif tetap:', data?.error);
-  } catch (e) { console.warn('Tarif Biteship gagal, pakai tarif tetap:', e); }
   $('#svc').innerHTML = 'Menghitung jarak…';
-  const j = await jarakJalan(CO.gs.la, CO.gs.lo); CO.gs.km = j.km;
+  const j = await jarakJalan(CO.gs.la, CO.gs.lo);
+  if (nomor !== CO.gsReq) return; // ada titik lebih baru
+  CO.gs.km = j.km;
   $('#gsInfo').innerHTML = `Titik: ${CO.gs.la.toFixed(5)}, ${CO.gs.lo.toFixed(5)} · Jarak dari toko <b>${j.km.toLocaleString('id-ID',{maximumFractionDigits:1})} km</b> (${j.via})`;
   if (j.km > maxKm) { CO.gsPesan = `Jarak ${j.km.toFixed(1)} km melebihi jangkauan GoSend toko (maks ${maxKm} km). Pilih J&T.`; drawSvc(); return; }
   CO.opsi = [{ layanan:'Instant', ket:'estimasi, dikonfirmasi admin', ongkir: tarifGosend(j.km), etd:`${j.km.toFixed(1)} km · 1–3 jam` }];
