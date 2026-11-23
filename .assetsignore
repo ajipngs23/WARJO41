@@ -1,0 +1,11 @@
+.git
+.git/**
+supabase
+supabase/**
+data
+data/**
+worker.js
+wrangler.jsonc
+.assetsignore
+*.sql
+*.md
