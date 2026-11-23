@@ -2,7 +2,7 @@
    Halaman: network-first (selalu versi terbaru, cadangan cache saat offline).
    Aset statis lokal: stale-while-revalidate. Data Supabase/API: tidak di-cache.
    Foto (/img/… dan storage Supabase): cache-first di cache terpisah, supaya tidak diunduh ulang. */
-const CACHE = 'warjo41-v25';
+const CACHE = 'warjo41-v26';
 const IMG = 'warjo41-img-v1'; // tidak ikut terhapus saat versi naik
 const SHELL = ['/', '/index.html', '/demo-db.js', '/manifest.json', '/logo.jpg', '/banner-bg.jpg', '/fonts/poppins-bold.woff', '/icons/icon-192.png', '/icons/icon-512.png'];
 
@@ -22,6 +22,7 @@ self.addEventListener('fetch', e => {
     return;
   }
   if (url.origin !== location.origin) return; // Supabase API, CDN, WA: langsung ke jaringan
+  if (/\.(mp4|webm|mov)$/i.test(url.pathname)) return; // video: langsung ke jaringan (butuh Range/206 untuk iPhone)
   if (req.mode === 'navigate') {
     e.respondWith(fetch(req).then(r => { const c = r.clone(); caches.open(CACHE).then(x => x.put('/index.html', c)); return r; })
       .catch(() => caches.match('/index.html')));
