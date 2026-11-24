@@ -234,7 +234,8 @@ const kgJnt = g => Math.max(1, Math.ceil(g/1000 - 0.3));
 
 /* ================= INIT ================= */
 async function loadSettings(){
-  const d = ok(await sb.from('settings').select('*'));
+  const pb = await publik();
+  const d = pb ? pb.settings : ok(await sb.from('settings').select('*'));
   S.settings = Object.fromEntries(d.map(x=>[x.key,x.value]));
   $('#logo').textContent = S.settings.nama_toko || 'Toko';
   document.title = S.settings.nama_toko || 'Toko';
@@ -274,6 +275,14 @@ async function loadProfile(){
 let CDN_OK = false;
 const FOTO_PREFIX = SUPABASE_URL + '/storage/v1/object/public/foto/';
 const cdn = u => (CDN_OK && typeof u === 'string' && u.startsWith(FOTO_PREFIX)) ? '/img/' + u.slice(FOTO_PREFIX.length) : u;
+// Data publik lewat cache Cloudflare (/api/publik); admin & bila gagal → langsung Supabase
+let PUB = null, PUB_T = 0;
+async function publik(){
+  if (!CDN_OK || isAdmin()) return null;
+  if (PUB && Date.now() - PUB_T < 60000) return PUB;
+  try { const r = await fetch('/api/publik'); if (!r.ok) return null; PUB = await r.json(); PUB_T = Date.now(); return PUB; } catch { return null; }
+}
+const segarkanPublik = () => { PUB = null; if (CDN_OK) fetch('/api/publik?segar=1').catch(()=>{}); }; // dipanggil admin setelah ubah data
 async function cekCdn(){
   try { CDN_OK = sessionStorage.getItem('cdn') === '1'; } catch {}
   if (DEMO_MODE || CDN_OK) return;
@@ -354,7 +363,9 @@ async function route(){
 /* ================= KATALOG ================= */
 let KAT = { q:'', kat:'Semua', list:[] };
 async function viewKatalog(){
-  const [pr, ik] = await Promise.all([sb.from('products').select('*').eq('aktif', true).order('nama'), sb.from('popups').select('*').eq('aktif', true).eq('posisi','baris').order('urutan')]);
+  const pb = await publik();
+  const [pr, ik] = pb ? [{ data: pb.products }, { data: pb.popups.filter(x => x.posisi === 'baris') }]
+    : await Promise.all([sb.from('products').select('*').eq('aktif', true).order('nama'), sb.from('popups').select('*').eq('aktif', true).eq('posisi','baris').order('urutan')]);
   KAT.list = ok(pr); const t = hariIni();
   KAT.ads = (ik.data||[]).filter(p => (!p.mulai || p.mulai <= t) && (!p.selesai || p.selesai >= t));
   drawKatalog();
@@ -872,7 +883,7 @@ async function lacakResi(resi){
 async function viewPoin(){
   await loadProfile(); renderNav();
   const [rw, logs, red] = await Promise.all([
-    sb.from('rewards').select('*').eq('aktif',true).order('poin'),
+    publik().then(pb => pb ? { data: pb.rewards } : sb.from('rewards').select('*').eq('aktif',true).order('poin')),
     sb.from('point_logs').select('*').eq('member_id',S.session.user.id).order('created_at',{ascending:false}).limit(50),
     sb.from('redemptions').select('*').eq('member_id',S.session.user.id).order('created_at',{ascending:false}),
   ]).then(r=>r.map(ok));
@@ -1161,14 +1172,14 @@ function formProduk(id){
       const fd = Object.fromEntries(new FormData(e.target));
       const row = { nama:fd.nama, kategori:fd.kategori||'Umum', deskripsi:fd.deskripsi, harga:+fd.harga, harga_slof: fd.harga_slof===''?null:+fd.harga_slof, harga_ball: fd.harga_ball===''?null:+fd.harga_ball, isi_slof:+fd.isi_slof||10, isi_ball:+fd.isi_ball||100, berat_gram:+fd.berat_gram, stok:+fd.stok, aktif:!!fd.aktif, foto_url:p.foto_url };
       const f = $('#ff').files[0]; if (f) row.foto_url = await uploadFoto(f, 'produk');
-      ok(id ? await sb.from('products').update(row).eq('id',id) : await sb.from('products').insert(row));
+      ok(id ? await sb.from('products').update(row).eq('id',id) : await sb.from('products').insert(row)); segarkanPublik();
       closeModal(); toast('Tersimpan'); route();
     } catch(er){ fail(er); b.disabled = false; }
   };
 }
 async function hapus(tbl, id){
   if (!confirm('Hapus data ini? (Jika sudah dipakai di pesanan/penukaran, nonaktifkan saja)')) return;
-  try { ok(await sb.from(tbl).delete().eq('id',id)); closeModal(); toast('Dihapus'); route(); } catch(e){ fail(e); }
+  try { ok(await sb.from(tbl).delete().eq('id',id)); segarkanPublik(); closeModal(); toast('Dihapus'); route(); } catch(e){ fail(e); }
 }
 
 /* ================= ADMIN: MEMBER & POIN MANUAL ================= */
@@ -1246,7 +1257,7 @@ function formHadiah(id){
     try { const fd = Object.fromEntries(new FormData(e.target));
       const row = { nama:fd.nama, deskripsi:fd.deskripsi, poin:+fd.poin, stok:+fd.stok, aktif:!!fd.aktif, foto_url:r.foto_url };
       const f = $('#ff').files[0]; if (f) row.foto_url = await uploadFoto(f, 'hadiah');
-      ok(id ? await sb.from('rewards').update(row).eq('id',id) : await sb.from('rewards').insert(row));
+      ok(id ? await sb.from('rewards').update(row).eq('id',id) : await sb.from('rewards').insert(row)); segarkanPublik();
       closeModal(); toast('Tersimpan'); viewAdminHadiah(); } catch(er){ fail(er); b.disabled = false; }
   };
 }
@@ -1270,7 +1281,8 @@ const hariIni = () => new Date().toLocaleDateString('sv-SE', { timeZone:'Asia/Ja
 async function tampilkanPopup(){
   if (isAdmin() || (location.hash||'').startsWith('#/admin')) return;
   if (sessionStorage.getItem('popupDitutup')) return;
-  const { data } = await sb.from('popups').select('*').eq('aktif', true).eq('posisi','popup').order('urutan');
+  const pb = await publik();
+  const { data } = pb ? { data: pb.popups.filter(x => x.posisi === 'popup') } : await sb.from('popups').select('*').eq('aktif', true).eq('posisi','popup').order('urutan');
   const t = hariIni();
   const list = (data||[]).filter(p => (!p.mulai || p.mulai <= t) && (!p.selesai || p.selesai >= t));
   if (list.length) popupKe(list, 0);
@@ -1371,7 +1383,7 @@ async function pratinjauIklan(){
   if (!list.length) return toast('Tidak ada iklan yang sedang tayang', true);
   popupKe(list, 0); sessionStorage.removeItem('popupDitutup');
 }
-async function togIklan(id, v){ try { ok(await sb.from('popups').update({ aktif:v }).eq('id', id)); viewAdminIklan(); } catch(e){ fail(e); } }
+async function togIklan(id, v){ try { ok(await sb.from('popups').update({ aktif:v }).eq('id', id)); segarkanPublik(); viewAdminIklan(); } catch(e){ fail(e); } }
 async function formIklan(id){
   const p = AI.find(x=>x.id===id) || { judul:'', gambar_url:'', link:'', teks_tombol:'', aktif:true, mulai:'', selesai:'', urutan:0 };
   const prods = ok(await sb.from('products').select('id,nama').order('nama'));
@@ -1403,7 +1415,7 @@ async function formIklan(id){
       if (j==='url' && link && !/^https?:\/\//.test(link)) link = 'https://' + link;
       const row = { posisi:AI_TAB, judul:fd.judul, teks_tombol:fd.teks_tombol, link, mulai:fd.mulai||null, selesai:fd.selesai||null, urutan:+fd.urutan||0, aktif:!!fd.aktif, gambar_url:p.gambar_url };
       const f = $('#fg').files[0]; if (f) { b.textContent = f.type.startsWith('video/') ? 'Mengupload video…' : 'Menyimpan…'; row.gambar_url = f.type.startsWith('video/') ? await uploadVideo(f, 'iklan') : await uploadFoto(f, 'iklan'); }
-      ok(id ? await sb.from('popups').update(row).eq('id',id) : await sb.from('popups').insert(row));
+      ok(id ? await sb.from('popups').update(row).eq('id',id) : await sb.from('popups').insert(row)); segarkanPublik();
       closeModal(); toast('Iklan tersimpan'); viewAdminIklan();
     } catch(er){ fail(er); b.disabled = false; }
   };
@@ -1538,7 +1550,7 @@ async function viewAdminPengaturan(){
     if (!$('#cbTf').checked && !$('#cbQr').checked) return toast('Centang minimal satu metode pembayaran', true);
     if ($('#cbTf').checked && !($('[name=bank_nama]').value.trim() && $('[name=bank_norek]').value.trim())) { $('#boxTf').style.display = 'block'; return toast('Isi nama bank & nomor rekening untuk Transfer Bank', true); }
     try { const fl = $('#fl').files[0]; if (fl) $('[name=logo_url]').value = await uploadFoto(fl, 'logo'); const fbg = $('#fbg').files[0]; if (fbg) $('[name=banner_url]').value = await uploadFoto(fbg, 'iklan'); const fq = $('#fq').files[0]; if (fq) { const path = `qris/${Date.now()}.${(fq.name.split('.').pop()||'jpg').toLowerCase()}`; ok(await sb.storage.from('foto').upload(path, fq, { upsert:true, contentType: fq.type })); $('[name=qris_url]').value = sb.storage.from('foto').getPublicUrl(path).data.publicUrl; } const rows = Object.entries(Object.fromEntries(new FormData(e.target))).map(([key,value])=>({key,value}));
-    ok(await sb.from('settings').upsert(rows)); await loadSettings(); toast('Pengaturan disimpan'); } catch(er){ fail(er); } };
+    ok(await sb.from('settings').upsert(rows)); segarkanPublik(); await loadSettings(); toast('Pengaturan disimpan'); } catch(er){ fail(er); } };
   $('#ft').onsubmit = async e => { e.preventDefault(); try { const fd = Object.fromEntries(new FormData(e.target)); ok(await sb.from('tarif_manual').upsert({ kota:fd.kota.trim(), tarif_per_kg:+fd.tarif_per_kg, etd:fd.etd||'2-3 hari' },{onConflict:'kota'})); viewAdminPengaturan(); } catch(er){ fail(er); } };
   if (api) { let tm; $('#oc').oninput = e => { clearTimeout(tm); tm = setTimeout(async ()=>{
     const q = e.target.value; if (q.length<3) return;

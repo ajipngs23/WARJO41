@@ -2,7 +2,7 @@
    Halaman: network-first (selalu versi terbaru, cadangan cache saat offline).
    Aset statis lokal: stale-while-revalidate. Data Supabase/API: tidak di-cache.
    Foto (/img/… dan storage Supabase): cache-first di cache terpisah, supaya tidak diunduh ulang. */
-const CACHE = 'warjo41-v26';
+const CACHE = 'warjo41-v27';
 const IMG = 'warjo41-img-v1'; // tidak ikut terhapus saat versi naik
 const SHELL = ['/', '/index.html', '/demo-db.js', '/manifest.json', '/logo.jpg', '/banner-bg.jpg', '/fonts/poppins-bold.woff', '/icons/icon-192.png', '/icons/icon-512.png'];
 
